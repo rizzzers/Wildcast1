@@ -3,6 +3,25 @@
 import { useState } from 'react';
 import { quizQuestions } from '@/data/quiz-options';
 
+interface OutreachRecord {
+  id: string;
+  sponsor_id: string;
+  brand_name: string;
+  contact_name: string;
+  contact_email: string;
+  contact_role: string | null;
+  template_used: string | null;
+  sent_at: string;
+}
+
+interface EmailContextData {
+  unique_value_prop: string | null;
+  past_sponsors: string | null;
+  audience_demographics: string | null;
+  notable_guests: string | null;
+  additional_notes: string | null;
+}
+
 interface ProfileData {
   user: {
     id: string;
@@ -26,6 +45,8 @@ interface ProfileData {
     description: string | null;
     has_media_kit: number;
   } | null;
+  outreach: OutreachRecord[];
+  emailContext: EmailContextData | null;
 }
 
 interface ProfileFormProps {
@@ -45,6 +66,13 @@ export function ProfileForm({ data }: ProfileFormProps) {
   const [releaseFrequency, setReleaseFrequency] = useState(data.submission?.release_frequency || '');
   const [format, setFormat] = useState(data.submission?.format || '');
   const [primaryGoal, setPrimaryGoal] = useState(data.submission?.primary_goal || '');
+
+  // Email context fields
+  const [uniqueValueProp, setUniqueValueProp] = useState(data.emailContext?.unique_value_prop || '');
+  const [pastSponsors, setPastSponsors] = useState(data.emailContext?.past_sponsors || '');
+  const [audienceDemographics, setAudienceDemographics] = useState(data.emailContext?.audience_demographics || '');
+  const [notableGuests, setNotableGuests] = useState(data.emailContext?.notable_guests || '');
+  const [additionalNotes, setAdditionalNotes] = useState(data.emailContext?.additional_notes || '');
 
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -83,6 +111,13 @@ export function ProfileForm({ data }: ProfileFormProps) {
             description: description || null,
             has_media_kit: hasMediaKit,
           },
+          emailContext: {
+            unique_value_prop: uniqueValueProp || null,
+            past_sponsors: pastSponsors || null,
+            audience_demographics: audienceDemographics || null,
+            notable_guests: notableGuests || null,
+            additional_notes: additionalNotes || null,
+          },
         }),
       });
       setSaved(true);
@@ -100,7 +135,7 @@ export function ProfileForm({ data }: ProfileFormProps) {
 
   return (
     <div className="space-y-8">
-      {/* Account Info (read-only) */}
+      {/* Account Info */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Account</h2>
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4">
@@ -177,6 +212,66 @@ export function ProfileForm({ data }: ProfileFormProps) {
         </div>
       </section>
 
+      {/* Email Context - influences email generation */}
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Email Context</h2>
+        <p className="text-sm text-gray-400 mb-4">
+          This information is woven into your outreach emails to make them more personal and persuasive.
+        </p>
+        <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4">
+          <div>
+            <label className={labelClasses}>What makes your podcast unique?</label>
+            <textarea
+              value={uniqueValueProp}
+              onChange={(e) => setUniqueValueProp(e.target.value)}
+              className={`${inputClasses} resize-none`}
+              rows={2}
+              placeholder="e.g. Only podcast interviewing Fortune 500 CTOs weekly, 95% completion rate"
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Past or current sponsors</label>
+            <textarea
+              value={pastSponsors}
+              onChange={(e) => setPastSponsors(e.target.value)}
+              className={`${inputClasses} resize-none`}
+              rows={2}
+              placeholder="e.g. Previously sponsored by Stripe, AWS, and Linear"
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Audience demographics</label>
+            <textarea
+              value={audienceDemographics}
+              onChange={(e) => setAudienceDemographics(e.target.value)}
+              className={`${inputClasses} resize-none`}
+              rows={2}
+              placeholder="e.g. 70% male, 25-44, $120k+ HHI, 60% US-based"
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Notable guests or achievements</label>
+            <textarea
+              value={notableGuests}
+              onChange={(e) => setNotableGuests(e.target.value)}
+              className={`${inputClasses} resize-none`}
+              rows={2}
+              placeholder="e.g. Featured guests include Y Combinator partners, Top 50 in Tech on Apple Podcasts"
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Anything else sponsors should know</label>
+            <textarea
+              value={additionalNotes}
+              onChange={(e) => setAdditionalNotes(e.target.value)}
+              className={`${inputClasses} resize-none`}
+              rows={2}
+              placeholder="e.g. Open to custom integrations, live reads, host-read only"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Survey Answers */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Survey Answers</h2>
@@ -220,6 +315,63 @@ export function ProfileForm({ data }: ProfileFormProps) {
           </span>
         )}
       </div>
+
+      {/* Outreach History */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Sent Outreach</h2>
+        {data.outreach.length === 0 ? (
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 text-center text-gray-500">
+            No emails sent yet. Complete the survey and reach out to sponsors to see your history here.
+          </div>
+        ) : (
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left p-4 font-semibold text-sm">Brand</th>
+                    <th className="text-left p-4 font-semibold text-sm">Contact</th>
+                    <th className="text-left p-4 font-semibold text-sm hidden md:table-cell">Email</th>
+                    <th className="text-left p-4 font-semibold text-sm hidden lg:table-cell">Template</th>
+                    <th className="text-left p-4 font-semibold text-sm">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.outreach.map((record) => (
+                    <tr key={record.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--card-hover)] transition-colors">
+                      <td className="p-4">
+                        <div className="font-medium text-sm">{record.brand_name}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm">{record.contact_name}</div>
+                        {record.contact_role && (
+                          <div className="text-xs text-gray-500">{record.contact_role}</div>
+                        )}
+                      </td>
+                      <td className="p-4 hidden md:table-cell">
+                        <a
+                          href={`mailto:${record.contact_email}`}
+                          className="text-sm text-[var(--primary)] hover:underline"
+                        >
+                          {record.contact_email}
+                        </a>
+                      </td>
+                      <td className="p-4 hidden lg:table-cell">
+                        <span className="text-xs px-2 py-1 bg-[var(--card-hover)] rounded-full capitalize">
+                          {record.template_used || 'custom'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-gray-400">
+                        {new Date(record.sent_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

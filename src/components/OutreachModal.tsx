@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Modal } from './Modal';
 import { SponsorMatch, QuizAnswers, PodcastInfo } from '@/types';
-import { generateEmailTemplates, getEmailSubject, EmailDraft } from '@/lib/templates';
+import { generateEmailTemplates, getEmailSubject, EmailDraft, EmailContext } from '@/lib/templates';
 
 interface OutreachModalProps {
   isOpen: boolean;
@@ -22,16 +23,30 @@ export function OutreachModal({
   podcastInfo,
   onSend,
 }: OutreachModalProps) {
+  const { data: session } = useSession();
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [selectedDraftId, setSelectedDraftId] = useState<string>('');
+  const [emailContext, setEmailContext] = useState<EmailContext | null>(null);
+
+  // Load email context from profile when authenticated
+  useEffect(() => {
+    if (session?.user?.id && !emailContext) {
+      fetch('/api/user/profile')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.emailContext) setEmailContext(data.emailContext);
+        })
+        .catch(() => {});
+    }
+  }, [session, emailContext]);
 
   useEffect(() => {
     if (isOpen) {
-      const emailDrafts = generateEmailTemplates(sponsor, quizAnswers, podcastInfo);
+      const emailDrafts = generateEmailTemplates(sponsor, quizAnswers, podcastInfo, emailContext);
       setDrafts(emailDrafts);
       setSelectedDraftId(emailDrafts[0]?.id || '');
     }
-  }, [isOpen, sponsor, quizAnswers, podcastInfo]);
+  }, [isOpen, sponsor, quizAnswers, podcastInfo, emailContext]);
 
   const updateDraft = (id: string, content: string) => {
     setDrafts((prev) =>
@@ -42,10 +57,31 @@ export function OutreachModal({
   const selectedDraft = drafts.find((d) => d.id === selectedDraftId);
   const currentMessage = selectedDraft?.content || '';
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const subject = encodeURIComponent(getEmailSubject(sponsor, podcastInfo));
     const body = encodeURIComponent(currentMessage);
     window.open(`mailto:${sponsor.email}?subject=${subject}&body=${body}`);
+
+    // Persist outreach if authenticated
+    if (session?.user?.id) {
+      try {
+        await fetch('/api/outreach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sponsorId: sponsor.id,
+            brandName: sponsor.brandName,
+            contactName: sponsor.contactName,
+            contactEmail: sponsor.email,
+            contactRole: sponsor.role,
+            templateUsed: selectedDraftId,
+          }),
+        });
+      } catch (error) {
+        console.error('Failed to track outreach:', error);
+      }
+    }
+
     onSend();
     onClose();
   };

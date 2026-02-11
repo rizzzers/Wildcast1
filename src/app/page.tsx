@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NavBar } from '@/components/NavBar';
+import { HowItWorks } from '@/components/HowItWorks';
 
 export default function Home() {
   return (
@@ -37,45 +38,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="px-6 py-24 border-t border-white/[0.06]">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-              How it works
-            </h2>
-            <p className="text-gray-400 max-w-md mx-auto">
-              Three steps to finding sponsors that actually make sense for your show.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-            <div className="group">
-              <div className="text-sm font-mono text-[var(--primary)] mb-3">01</div>
-              <h3 className="text-lg font-semibold mb-2">Tell us about your show</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Category, audience size, tone, format. Seven quick questions
-                so we understand what makes your podcast unique.
-              </p>
-            </div>
-            <div className="group">
-              <div className="text-sm font-mono text-[var(--primary)] mb-3">02</div>
-              <h3 className="text-lg font-semibold mb-2">Get matched</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Our matching engine pairs you with sponsors whose target
-                audience overlaps with your listeners.
-              </p>
-            </div>
-            <div className="group">
-              <div className="text-sm font-mono text-[var(--primary)] mb-3">03</div>
-              <h3 className="text-lg font-semibold mb-2">Start conversations</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Get direct contact details and outreach templates.
-                No middlemen, no waiting.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HowItWorks />
 
       {/* Value props */}
       <section className="px-6 py-24 border-t border-white/[0.06]">

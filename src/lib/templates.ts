@@ -6,10 +6,19 @@ export interface EmailDraft {
   content: string;
 }
 
+export interface EmailContext {
+  unique_value_prop?: string | null;
+  past_sponsors?: string | null;
+  audience_demographics?: string | null;
+  notable_guests?: string | null;
+  additional_notes?: string | null;
+}
+
 export function generateEmailTemplates(
   sponsor: SponsorMatch,
   quizAnswers: QuizAnswers,
-  podcastInfo: PodcastInfo
+  podcastInfo: PodcastInfo,
+  emailContext?: EmailContext | null
 ): EmailDraft[] {
   const audienceDesc = quizAnswers.listenerType
     ?.replace('-', ' ')
@@ -17,6 +26,25 @@ export function generateEmailTemplates(
     .replace('parents', 'parents and caregivers')
     .replace('creators', 'creators and influencers')
     .replace('curious', 'curious generalists') || 'engaged listeners';
+
+  // Build context paragraphs from email context
+  const contextLines: string[] = [];
+  if (emailContext?.unique_value_prop) {
+    contextLines.push(emailContext.unique_value_prop);
+  }
+  if (emailContext?.audience_demographics) {
+    contextLines.push(`Our audience: ${emailContext.audience_demographics}`);
+  }
+  if (emailContext?.past_sponsors) {
+    contextLines.push(`We've previously worked with ${emailContext.past_sponsors}.`);
+  }
+  if (emailContext?.notable_guests) {
+    contextLines.push(emailContext.notable_guests);
+  }
+  if (emailContext?.additional_notes) {
+    contextLines.push(emailContext.additional_notes);
+  }
+  const contextBlock = contextLines.length > 0 ? contextLines.join(' ') + '\n\n' : '';
 
   const formal: EmailDraft = {
     id: 'formal',
@@ -27,7 +55,7 @@ I'm the host of ${podcastInfo.podcastName}, and I believe there's a strong align
 
 ${podcastInfo.description ? `About my show: ${podcastInfo.description}\n\n` : ''}My podcast focuses on ${quizAnswers.category?.replace('-', ' ')} content with a ${quizAnswers.tone?.replace('-', ' ')} tone. We release episodes ${quizAnswers.releaseFrequency} and have built an engaged audience of ${audienceDesc}.
 
-I'd love to explore a sponsorship partnership with ${sponsor.brandName}. ${podcastInfo.hasMediaKit ? 'I have a media kit ready to share.' : ''}
+${contextBlock}I'd love to explore a sponsorship partnership with ${sponsor.brandName}. ${podcastInfo.hasMediaKit ? 'I have a media kit ready to share.' : ''}
 
 Would you be open to a brief call to discuss?
 
@@ -46,7 +74,7 @@ I host ${podcastInfo.podcastName} and I'm a big fan of what ${sponsor.brandName}
 
 ${podcastInfo.description ? `Quick background: ${podcastInfo.description}\n\n` : ''}My show is all about ${quizAnswers.category?.replace('-', ' ')} with a ${quizAnswers.tone?.replace('-', ' ')} vibe. I think your brand would really resonate with my listeners - they're mostly ${audienceDesc} who tune in ${quizAnswers.releaseFrequency}.
 
-Would love to chat about a potential sponsorship. Got 15 minutes this week?
+${contextBlock}Would love to chat about a potential sponsorship. Got 15 minutes this week?
 
 Cheers,
 [Your Name]

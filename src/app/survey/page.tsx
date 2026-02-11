@@ -7,14 +7,14 @@ import { EmailGate } from '@/components/EmailGate';
 import { SponsorResults } from '@/components/SponsorResults';
 import { GrowthPlan } from '@/components/GrowthPlan';
 import { Consultation } from '@/components/Consultation';
-import { QuizAnswers, PodcastInfo, SponsorMatch, GrowthPlan as GrowthPlanType, AppStep } from '@/types';
-import { matchSponsors } from '@/lib/matching';
+import { QuizAnswers, PodcastInfo, GrowthPlan as GrowthPlanType, AppStep } from '@/types';
+import { ContactMatch } from '@/lib/contact-matching';
 
 export default function SurveyPage() {
   const [step, setStep] = useState<AppStep>('quiz');
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
   const [podcastInfo, setPodcastInfo] = useState<PodcastInfo | null>(null);
-  const [sponsorMatches, setSponsorMatches] = useState<SponsorMatch[]>([]);
+  const [contactMatches, setContactMatches] = useState<ContactMatch[]>([]);
   const [growthPlan, setGrowthPlan] = useState<GrowthPlanType | null>(null);
 
   const handleQuizComplete = (answers: QuizAnswers) => {
@@ -48,8 +48,18 @@ export default function SurveyPage() {
     }
 
     if (quizAnswers.audienceSize === 'over-10k') {
-      const matches = matchSponsors(quizAnswers);
-      setSponsorMatches(matches);
+      // Fetch matched contacts from the server
+      try {
+        const res = await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(quizAnswers),
+        });
+        const data = await res.json();
+        setContactMatches(data.matches || data);
+      } catch (error) {
+        console.error('Failed to fetch contact matches:', error);
+      }
       setStep('results');
     } else {
       setStep('consultation');
@@ -70,7 +80,7 @@ export default function SurveyPage() {
                 setStep('quiz');
                 setQuizAnswers({});
                 setPodcastInfo(null);
-                setSponsorMatches([]);
+                setContactMatches([]);
                 setGrowthPlan(null);
               }}
               className="text-sm text-gray-400 hover:text-white transition-colors"
@@ -92,7 +102,7 @@ export default function SurveyPage() {
 
         {step === 'results' && podcastInfo && (
           <SponsorResults
-            matches={sponsorMatches}
+            matches={contactMatches}
             quizAnswers={quizAnswers}
             podcastInfo={podcastInfo}
           />

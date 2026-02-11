@@ -15,6 +15,10 @@ export default function ProfilePage() {
       fetch('/api/user/profile')
         .then((res) => res.json())
         .then((data) => {
+          if (data.error) {
+            setLoading(false);
+            return;
+          }
           setProfileData(data);
           setLoading(false);
         })

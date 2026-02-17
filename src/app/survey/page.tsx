@@ -4,16 +4,18 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Quiz } from '@/components/Quiz';
 import { EmailGate } from '@/components/EmailGate';
+import { ProfileContext } from '@/components/ProfileContext';
 import { SponsorResults } from '@/components/SponsorResults';
 import { GrowthPlan } from '@/components/GrowthPlan';
 import { Consultation } from '@/components/Consultation';
-import { QuizAnswers, PodcastInfo, GrowthPlan as GrowthPlanType, AppStep } from '@/types';
+import { QuizAnswers, PodcastInfo, EmailContext, GrowthPlan as GrowthPlanType, AppStep } from '@/types';
 import { ContactMatch } from '@/lib/contact-matching';
 
 export default function SurveyPage() {
   const [step, setStep] = useState<AppStep>('quiz');
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
   const [podcastInfo, setPodcastInfo] = useState<PodcastInfo | null>(null);
+  const [emailContext, setEmailContext] = useState<EmailContext | null>(null);
   const [contactMatches, setContactMatches] = useState<ContactMatch[]>([]);
   const [growthPlan, setGrowthPlan] = useState<GrowthPlanType | null>(null);
 
@@ -47,13 +49,37 @@ export default function SurveyPage() {
       console.error('Failed to persist survey:', error);
     }
 
+    setStep('profile-context');
+  };
+
+  const handleProfileContextSubmit = async (context: EmailContext | null) => {
+    setEmailContext(context);
+
+    // If user is authenticated, persist email context
+    if (context) {
+      try {
+        await fetch('/api/user/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emailContext: context }),
+        });
+      } catch (error) {
+        // Non-blocking: user may not be authenticated
+        console.error('Failed to save profile context:', error);
+      }
+    }
+
     if (quizAnswers.audienceSize === 'over-10k') {
-      // Fetch matched contacts from the server
+      // Fetch matched contacts with email context included
       try {
         const res = await fetch('/api/contacts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(quizAnswers),
+          body: JSON.stringify({
+            quizAnswers,
+            podcastInfo,
+            emailContext: context,
+          }),
         });
         const data = await res.json();
         setContactMatches(data.matches || data);
@@ -80,6 +106,7 @@ export default function SurveyPage() {
                 setStep('quiz');
                 setQuizAnswers({});
                 setPodcastInfo(null);
+                setEmailContext(null);
                 setContactMatches([]);
                 setGrowthPlan(null);
               }}
@@ -98,6 +125,10 @@ export default function SurveyPage() {
 
         {step === 'email-gate' && (
           <EmailGate onSubmit={handleEmailSubmit} />
+        )}
+
+        {step === 'profile-context' && (
+          <ProfileContext onSubmit={handleProfileContextSubmit} />
         )}
 
         {step === 'results' && podcastInfo && (

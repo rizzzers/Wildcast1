@@ -48,6 +48,14 @@ export interface PodcastInfo {
   hasMediaKit: boolean;
 }
 
+export interface EmailContext {
+  unique_value_prop?: string | null;
+  past_sponsors?: string | null;
+  audience_demographics?: string | null;
+  notable_guests?: string | null;
+  additional_notes?: string | null;
+}
+
 export interface Sponsor {
   id: string;
   brandName: string;
@@ -76,7 +84,7 @@ export interface GrowthPlan {
   distributionStrategies: string[];
 }
 
-export type AppStep = 'landing' | 'quiz' | 'email-gate' | 'results' | 'growth-plan' | 'consultation';
+export type AppStep = 'landing' | 'quiz' | 'email-gate' | 'profile-context' | 'results' | 'growth-plan' | 'consultation';
 
 export interface User {
   id: string;

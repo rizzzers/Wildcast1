@@ -8,6 +8,7 @@ export interface QuizQuestionDef {
   id: string;
   question: string;
   options: QuizOption[];
+  multiSelect?: boolean;
 }
 
 export const quizQuestions: QuizQuestionDef[] = [
@@ -26,7 +27,7 @@ export const quizQuestions: QuizQuestionDef[] = [
   },
   {
     id: 'audienceSize',
-    question: "What's your average downloads per episode?",
+    question: "What's your average audience reach per week?",
     options: [
       { value: 'under-10k', label: 'Under 10,000', description: 'Growing audience, building momentum' },
       { value: 'over-10k', label: '10,000+', description: 'Established audience, ready for sponsors' },
@@ -35,11 +36,15 @@ export const quizQuestions: QuizQuestionDef[] = [
   {
     id: 'listenerType',
     question: 'Who is your primary listener?',
+    multiSelect: true,
     options: [
       { value: 'founders-executives', label: 'Founders & Executives', description: 'Decision makers, high earners' },
       { value: 'parents-caregivers', label: 'Parents & Caregivers', description: 'Family-focused, household buyers' },
       { value: 'creators-influencers', label: 'Creators & Influencers', description: 'Content creators, side hustlers' },
       { value: 'curious-generalists', label: 'Curious Generalists', description: 'Lifelong learners, diverse interests' },
+      { value: 'health-fitness-enthusiasts', label: 'Health & Fitness Enthusiasts', description: 'Active lifestyles, wellness-driven spenders' },
+      { value: 'young-professionals', label: 'Young Professionals (25–40)', description: 'Career-driven, high purchase intent' },
+      { value: 'hobbyists-diy', label: 'Hobbyists & DIY Makers', description: 'Passionate niches, loyal brand advocates' },
     ],
   },
   {

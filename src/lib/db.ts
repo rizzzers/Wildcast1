@@ -98,9 +98,24 @@ function initSchema(db: Database.Database) {
 
 function migrate(db: Database.Database) {
   // Add plan column if it doesn't exist (for existing databases)
-  const cols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-  if (!cols.some((c) => c.name === 'plan')) {
+  const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!userCols.some((c) => c.name === 'plan')) {
     db.exec("ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'");
+  }
+
+  // Add email_content column to outreach_history if missing
+  const outreachCols = db.prepare("PRAGMA table_info(outreach_history)").all() as { name: string }[];
+  if (!outreachCols.some((c) => c.name === 'email_content')) {
+    db.exec("ALTER TABLE outreach_history ADD COLUMN email_content TEXT");
+  }
+  if (!outreachCols.some((c) => c.name === 'email_subject')) {
+    db.exec("ALTER TABLE outreach_history ADD COLUMN email_subject TEXT");
+  }
+
+  // Add assigned_user_id column to contacts if missing
+  const contactCols = db.prepare("PRAGMA table_info(contacts)").all() as { name: string }[];
+  if (!contactCols.some((c) => c.name === 'assigned_user_id')) {
+    db.exec("ALTER TABLE contacts ADD COLUMN assigned_user_id TEXT REFERENCES users(id)");
   }
 }
 

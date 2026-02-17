@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Wildcast <noreply@wildcast.app>',
+        from: 'Sponsor Vibe <noreply@sponsorvibe.app>',
         to: 'ryan@ryanestes.info',
         subject: `New Podcast Submission: ${data.podcastName}`,
         html: `

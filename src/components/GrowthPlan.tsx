@@ -49,7 +49,7 @@ export function GrowthPlan({ quizAnswers, growthPlan }: GrowthPlanProps) {
             </div>
             <div>
               <div className="text-sm text-gray-400">Target Audience</div>
-              <div className="font-semibold capitalize">{quizAnswers.listenerType?.replace('-', ' ')}</div>
+              <div className="font-semibold capitalize">{Array.isArray(quizAnswers.listenerType) ? quizAnswers.listenerType.map(t => t.replace(/-/g, ' ')).join(', ') : quizAnswers.listenerType?.replace(/-/g, ' ')}</div>
             </div>
             <div>
               <div className="text-sm text-gray-400">Current Status</div>

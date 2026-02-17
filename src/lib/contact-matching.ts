@@ -53,6 +53,9 @@ const listenerKeywords: Record<string, string[]> = {
   'parents-caregivers': ['consumer', 'food', 'home', 'children', 'infant', 'family', 'health care', 'packaged goods', 'baby', 'mother', 'toy', 'montessori'],
   'creators-influencers': ['social media', 'influencer', 'content', 'creator', 'digital', 'app', 'online retailer', 'direct-to-consumer', 'fashion', 'beauty', 'apparel'],
   'curious-generalists': ['education', 'media', 'entertainment', 'publishing', 'retailer', 'consumer', 'food', 'beverage'],
+  'health-fitness-enthusiasts': ['health', 'fitness', 'wellness', 'nutrition', 'supplement', 'sports', 'vitamin', 'personal care', 'grooming', 'athletic'],
+  'young-professionals': ['financial', 'career', 'software', 'fashion', 'apparel', 'streaming', 'subscription', 'direct-to-consumer', 'fintech'],
+  'hobbyists-diy': ['home goods', 'hardware', 'craft', 'garden', 'outdoor', 'retailer', 'tool', 'consumer', 'hobby', 'maker'],
 };
 
 export function matchContacts(quizAnswers: QuizAnswers): ContactMatch[] {
@@ -60,7 +63,10 @@ export function matchContacts(quizAnswers: QuizAnswers): ContactMatch[] {
   const contacts = db.prepare('SELECT * FROM contacts').all() as DbContact[];
 
   const catKeywords = categoryKeywords[quizAnswers.category || ''] || [];
-  const listKeywords = listenerKeywords[quizAnswers.listenerType || ''] || [];
+  const listenerTypes = Array.isArray(quizAnswers.listenerType)
+    ? quizAnswers.listenerType
+    : quizAnswers.listenerType ? [quizAnswers.listenerType] : [];
+  const listKeywords = [...new Set(listenerTypes.flatMap(t => listenerKeywords[t] || []))];
 
   const scored: ContactMatch[] = contacts.map((c) => {
     const searchText = `${c.description} ${c.industries} ${c.title}`.toLowerCase();
@@ -100,7 +106,7 @@ export function matchContacts(quizAnswers: QuizAnswers): ContactMatch[] {
     if (listenerHits > 0) {
       const listenerScore = Math.min(20, listenerHits * 8);
       score += listenerScore;
-      reasons.push(`Relevant to ${quizAnswers.listenerType?.replace(/-/g, ' ')} audience`);
+      reasons.push(`Relevant to ${listenerTypes.map(t => t.replace(/-/g, ' ')).join(', ')} audience`);
     }
 
     // Sponsorship/advertising role bonus (up to 15 points)

@@ -15,6 +15,7 @@ export default function SponsorsPage() {
   const [loading, setLoading] = useState(true);
   const [totalMatches, setTotalMatches] = useState(0);
   const [isLimited, setIsLimited] = useState(false);
+  const [outreachHistory, setOutreachHistory] = useState<{ sponsor_id: string; sent_at: string }[]>([]);
 
   // Fetch user's profile data and build quiz/podcast info from it
   useEffect(() => {
@@ -31,11 +32,15 @@ export default function SponsorsPage() {
           return;
         }
 
+        if (data.outreach) {
+          setOutreachHistory(data.outreach);
+        }
+
         const s = data.submission;
         const answers: QuizAnswers = {
           category: s.category || undefined,
           audienceSize: s.audience_size || undefined,
-          listenerType: s.listener_type || undefined,
+          listenerType: s.listener_type?.includes(',') ? s.listener_type.split(',') : (s.listener_type || undefined),
           tone: s.tone || undefined,
           releaseFrequency: s.release_frequency || undefined,
           format: s.format || undefined,
@@ -99,6 +104,8 @@ export default function SponsorsPage() {
               matches={matches}
               quizAnswers={quizAnswers}
               podcastInfo={podcastInfo!}
+              isLimited={isLimited}
+              outreachHistory={outreachHistory}
             />
 
             {isLimited && totalMatches > matches.length && (

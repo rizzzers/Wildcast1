@@ -13,7 +13,10 @@ export type ListenerType =
   | 'founders-executives'
   | 'parents-caregivers'
   | 'creators-influencers'
-  | 'curious-generalists';
+  | 'curious-generalists'
+  | 'health-fitness-enthusiasts'
+  | 'young-professionals'
+  | 'hobbyists-diy';
 
 export type PodcastTone =
   | 'tactical-serious'
@@ -30,7 +33,7 @@ export type PrimaryGoal = 'sponsorships' | 'grow-audience' | 'both';
 export interface QuizAnswers {
   category?: PodcastCategory;
   audienceSize?: AudienceSize;
-  listenerType?: ListenerType;
+  listenerType?: ListenerType | ListenerType[];
   tone?: PodcastTone;
   releaseFrequency?: ReleaseFrequency;
   format?: PodcastFormat;

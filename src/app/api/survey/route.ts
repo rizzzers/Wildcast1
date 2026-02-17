@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       id,
       category || null,
       audienceSize || null,
-      listenerType || null,
+      Array.isArray(listenerType) ? listenerType.join(',') : (listenerType || null),
       tone || null,
       releaseFrequency || null,
       format || null,

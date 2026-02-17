@@ -6,14 +6,14 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  // Protect /profile — must be authenticated
+  // Protect /profile -must be authenticated
   if (pathname.startsWith('/profile')) {
     if (!token) {
       return NextResponse.redirect(new URL('/', req.url));
     }
   }
 
-  // Protect /admin — must be authenticated + admin role
+  // Protect /admin -must be authenticated + admin role
   if (pathname.startsWith('/admin')) {
     if (!token || token.role !== 'admin') {
       return NextResponse.redirect(new URL('/', req.url));

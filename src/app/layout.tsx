@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wildcast - Find Podcast Sponsors",
+  title: "Sponsor Vibe - Find Podcast Sponsors",
   description: "Match with the perfect sponsors for your podcast",
 };
 

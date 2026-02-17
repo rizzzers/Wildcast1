@@ -15,7 +15,7 @@ export function NavBar() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg" />
-            <span className="font-bold text-xl tracking-tight">Wildcast</span>
+            <span className="font-bold text-xl tracking-tight">Sponsor Vibe</span>
           </Link>
 
           <nav className="flex items-center gap-6">

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { sponsorId, brandName, contactName, contactEmail, contactRole, templateUsed } = await req.json();
+    const { sponsorId, brandName, contactName, contactEmail, contactRole, templateUsed, emailSubject, emailContent } = await req.json();
 
     if (!sponsorId || !brandName || !contactName || !contactEmail) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
     const id = crypto.randomUUID();
 
     db.prepare(`
-      INSERT INTO outreach_history (id, user_id, sponsor_id, brand_name, contact_name, contact_email, contact_role, template_used)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, session.user.id, sponsorId, brandName, contactName, contactEmail, contactRole || null, templateUsed || null);
+      INSERT INTO outreach_history (id, user_id, sponsor_id, brand_name, contact_name, contact_email, contact_role, template_used, email_subject, email_content)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, session.user.id, sponsorId, brandName, contactName, contactEmail, contactRole || null, templateUsed || null, emailSubject || null, emailContent || null);
 
     return NextResponse.json({ id });
   } catch (error) {

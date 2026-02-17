@@ -15,13 +15,17 @@ export async function POST(req: NextRequest) {
     // Check user plan to determine limit
     const session = await getServerSession(authOptions);
     let plan = 'free';
+    let role = 'user';
     if (session?.user?.id) {
       const db = getDb();
-      const user = db.prepare('SELECT plan FROM users WHERE id = ?').get(session.user.id) as { plan: string } | undefined;
-      if (user) plan = user.plan;
+      const user = db.prepare('SELECT plan, role FROM users WHERE id = ?').get(session.user.id) as { plan: string; role: string } | undefined;
+      if (user) {
+        plan = user.plan;
+        role = user.role;
+      }
     }
 
-    const limited = plan === 'free';
+    const limited = plan === 'free' && role !== 'admin';
     const results = limited ? matches.slice(0, FREE_LIMIT) : matches;
 
     return NextResponse.json({

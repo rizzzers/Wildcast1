@@ -72,7 +72,7 @@ export default function SurveyPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg" />
-            <span className="font-bold text-xl">Wildcast</span>
+            <span className="font-bold text-xl">Sponsor Vibe</span>
           </Link>
           {step !== 'quiz' && (
             <button
@@ -105,6 +105,8 @@ export default function SurveyPage() {
             matches={contactMatches}
             quizAnswers={quizAnswers}
             podcastInfo={podcastInfo}
+            isLimited={false}
+            outreachHistory={[]}
           />
         )}
 

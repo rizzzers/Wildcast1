@@ -34,10 +34,14 @@ export function matchSponsors(answers: QuizAnswers): SponsorMatch[] {
       'parents-caregivers': ['Parents', 'Busy families', 'Health-conscious consumers'],
       'creators-influencers': ['Creators', 'Side hustlers', 'Content creators'],
       'curious-generalists': ['Lifelong learners', 'Multitaskers', 'Self-improvement focused'],
+      'health-fitness-enthusiasts': ['Athletes', 'Fitness enthusiasts', 'Health-conscious consumers', 'Active lifestyle'],
+      'young-professionals': ['Young professionals', 'Career-driven', 'Millennials', 'Ambitious professionals'],
+      'hobbyists-diy': ['Hobbyists', 'DIY enthusiasts', 'Makers', 'Craft lovers', 'Home improvers'],
     };
 
     if (answers.listenerType) {
-      const targetListeners = listenerMatchMap[answers.listenerType] || [];
+      const types = Array.isArray(answers.listenerType) ? answers.listenerType : [answers.listenerType];
+      const targetListeners = [...new Set(types.flatMap(t => listenerMatchMap[t] || []))];
       const hasMatch = sponsor.audiencePreferences.some((pref) =>
         targetListeners.some((target) => pref.toLowerCase().includes(target.toLowerCase()))
       );

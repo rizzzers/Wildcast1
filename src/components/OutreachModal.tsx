@@ -6,12 +6,16 @@ import { Modal } from './Modal';
 import { SponsorMatch, QuizAnswers, PodcastInfo } from '@/types';
 import { generateEmailTemplates, getEmailSubject, EmailDraft, EmailContext } from '@/lib/templates';
 
-const SAVED_TEMPLATES_KEY = 'wildcast_saved_templates';
+const SAVED_TEMPLATES_PREFIX = 'wildcast_saved_templates';
 
 interface SavedTemplate {
   id: string;
   name: string;
   content: string; // stored with placeholders
+}
+
+function getSavedTemplatesKey(userId?: string | null): string {
+  return userId ? `${SAVED_TEMPLATES_PREFIX}_${userId}` : SAVED_TEMPLATES_PREFIX;
 }
 
 function toPlaceholders(text: string, sponsor: SponsorMatch, podcastInfo: PodcastInfo): string {
@@ -31,17 +35,17 @@ function fromPlaceholders(text: string, sponsor: SponsorMatch, podcastInfo: Podc
     .replaceAll('{{podcastUrl}}', podcastInfo.podcastUrl);
 }
 
-function loadSavedTemplates(): SavedTemplate[] {
+function loadSavedTemplates(userId?: string | null): SavedTemplate[] {
   try {
-    const raw = localStorage.getItem(SAVED_TEMPLATES_KEY);
+    const raw = localStorage.getItem(getSavedTemplatesKey(userId));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function persistSavedTemplates(templates: SavedTemplate[]) {
-  localStorage.setItem(SAVED_TEMPLATES_KEY, JSON.stringify(templates));
+function persistSavedTemplates(templates: SavedTemplate[], userId?: string | null) {
+  localStorage.setItem(getSavedTemplatesKey(userId), JSON.stringify(templates));
 }
 
 interface OutreachModalProps {
@@ -68,6 +72,9 @@ export function OutreachModal({
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [gmailConnected, setGmailConnected] = useState<boolean | null>(null); // null = loading
 
   // Load email context from profile when authenticated
   useEffect(() => {
@@ -81,10 +88,12 @@ export function OutreachModal({
     }
   }, [session, emailContext]);
 
-  // Load saved templates from localStorage on mount
+  const userId = session?.user?.id;
+
+  // Load saved templates from localStorage (user-scoped)
   useEffect(() => {
-    setSavedTemplates(loadSavedTemplates());
-  }, []);
+    setSavedTemplates(loadSavedTemplates(userId));
+  }, [userId]);
 
   const buildDrafts = useCallback(() => {
     const builtIn = generateEmailTemplates(sponsor, quizAnswers, podcastInfo, emailContext);
@@ -103,8 +112,15 @@ export function OutreachModal({
       setSelectedDraftId(allDrafts[0]?.id || '');
       setShowSaveInput(false);
       setSaveTemplateName('');
+      setSendError(null);
+
+      fetch('/api/gmail/status')
+        .then((r) => r.json())
+        .then((d) => setGmailConnected(d.connected))
+        .catch(() => setGmailConnected(false));
     }
-  }, [isOpen, buildDrafts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const updateDraft = (id: string, content: string) => {
     setDrafts((prev) =>
@@ -127,7 +143,7 @@ export function OutreachModal({
     };
     const updated = [...savedTemplates, newTemplate];
     setSavedTemplates(updated);
-    persistSavedTemplates(updated);
+    persistSavedTemplates(updated, userId);
 
     // Rebuild drafts and select the new one
     const builtIn = generateEmailTemplates(sponsor, quizAnswers, podcastInfo, emailContext);
@@ -145,7 +161,7 @@ export function OutreachModal({
   const handleDeleteSavedTemplate = (savedId: string) => {
     const updated = savedTemplates.filter((t) => `saved-${t.id}` !== savedId);
     setSavedTemplates(updated);
-    persistSavedTemplates(updated);
+    persistSavedTemplates(updated, userId);
 
     const allDrafts = drafts.filter((d) => d.id !== savedId);
     setDrafts(allDrafts);
@@ -156,34 +172,38 @@ export function OutreachModal({
 
   const handleSend = async () => {
     const emailSubject = getEmailSubject(sponsor, podcastInfo);
-    const subject = encodeURIComponent(emailSubject);
-    const body = encodeURIComponent(currentMessage);
-    window.open(`mailto:${sponsor.email}?subject=${subject}&body=${body}`);
+    setIsSending(true);
+    setSendError(null);
 
-    // Persist outreach if authenticated
-    if (session?.user?.id) {
-      try {
-        await fetch('/api/outreach', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sponsorId: sponsor.id,
-            brandName: sponsor.brandName,
-            contactName: sponsor.contactName,
-            contactEmail: sponsor.email,
-            contactRole: sponsor.role,
-            templateUsed: selectedDraftId,
-            emailSubject,
-            emailContent: currentMessage,
-          }),
-        });
-      } catch (error) {
-        console.error('Failed to track outreach:', error);
+    try {
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: sponsor.email,
+          subject: emailSubject,
+          body: currentMessage,
+          sponsorId: sponsor.id,
+          brandName: sponsor.brandName,
+          contactName: sponsor.contactName,
+          contactRole: sponsor.role,
+          templateUsed: selectedDraftId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setSendError(data.error || 'Failed to send email. Please try again.');
+        return;
       }
-    }
 
-    onSend();
-    onClose();
+      onSend();
+      onClose();
+    } catch {
+      setSendError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const title = `Email ${sponsor.contactName} at ${sponsor.brandName}`;
@@ -191,8 +211,26 @@ export function OutreachModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="3xl">
       <div className="space-y-4">
+        {gmailConnected === false && (
+          <div className="px-4 py-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 flex items-start gap-3">
+            <svg className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <div>
+              <p className="text-sm text-yellow-300 font-medium">Gmail not connected</p>
+              <p className="text-sm text-gray-400 mt-0.5">
+                Connect your Gmail account in your{' '}
+                <a href="/profile" className="text-yellow-400 hover:text-yellow-300 underline">
+                  profile
+                </a>{' '}
+                to send outreach emails directly from your account.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="text-sm text-gray-400">
-          Choose a template and edit your email. Clicking Send will open your email client.
+          Choose a template and edit your email. Clicking Send will deliver it directly from your Gmail account.
         </div>
 
         <div className="space-y-4">
@@ -283,6 +321,12 @@ export function OutreachModal({
           )}
         </div>
 
+        {sendError && (
+          <div className="px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg">
+            {sendError}
+          </div>
+        )}
+
         <div className="flex items-center justify-between pt-2">
           <span className="text-sm text-gray-400">
             {selectedDraft ? `Sending: ${selectedDraft.name} template` : ''}
@@ -291,7 +335,8 @@ export function OutreachModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-400 hover:bg-[var(--background)] rounded-lg transition-colors"
+              disabled={isSending}
+              className="px-4 py-2 text-gray-400 hover:bg-[var(--background)] disabled:opacity-50 rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -308,23 +353,35 @@ export function OutreachModal({
             )}
             <button
               onClick={handleSend}
-              disabled={!currentMessage.trim()}
+              disabled={!currentMessage.trim() || isSending || gmailConnected === false || gmailConnected === null}
               className="px-6 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 rounded-lg font-medium transition-colors flex items-center gap-2"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              Send Email
+              {isSending ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Send Email
+                </>
+              )}
             </button>
           </div>
         </div>

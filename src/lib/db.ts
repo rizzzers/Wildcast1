@@ -83,6 +83,16 @@ function initSchema(db: Database.Database) {
       sent_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS ai_match_cache (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      submission_hash TEXT NOT NULL,
+      scores_json TEXT NOT NULL,
+      model TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, submission_hash)
+    );
+
     CREATE TABLE IF NOT EXISTS email_context (
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE NOT NULL REFERENCES users(id),
@@ -116,6 +126,25 @@ function migrate(db: Database.Database) {
   const contactCols = db.prepare("PRAGMA table_info(contacts)").all() as { name: string }[];
   if (!contactCols.some((c) => c.name === 'assigned_user_id')) {
     db.exec("ALTER TABLE contacts ADD COLUMN assigned_user_id TEXT REFERENCES users(id)");
+  }
+
+  // Create gmail_tokens table if it doesn't exist
+  const gmailTableExists = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='gmail_tokens'"
+  ).get();
+  if (!gmailTableExists) {
+    db.exec(`
+      CREATE TABLE gmail_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT UNIQUE NOT NULL REFERENCES users(id),
+        access_token TEXT NOT NULL,
+        refresh_token TEXT,
+        expires_at TEXT,
+        gmail_address TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `);
   }
 }
 

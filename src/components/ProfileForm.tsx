@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { quizQuestions } from '@/data/quiz-options';
 
 interface OutreachRecord {
@@ -77,6 +78,41 @@ export function ProfileForm({ data }: ProfileFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Gmail connection state
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState<string | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [gmailBanner, setGmailBanner] = useState<'connected' | 'error' | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    fetch('/api/gmail/status')
+      .then((r) => r.json())
+      .then((d) => {
+        setGmailConnected(d.connected);
+        setGmailEmail(d.email ?? null);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('gmail_connected')) setGmailBanner('connected');
+    if (searchParams.get('gmail_error')) setGmailBanner('error');
+  }, [searchParams]);
+
+  const handleGmailDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      await fetch('/api/gmail/disconnect', { method: 'POST' });
+      setGmailConnected(false);
+      setGmailEmail(null);
+    } catch {
+      // ignore
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   const stateMap: Record<string, { value: string; setter: (v: string) => void }> = {
     category: { value: category, setter: setCategory },
     audienceSize: { value: audienceSize, setter: setAudienceSize },
@@ -135,6 +171,18 @@ export function ProfileForm({ data }: ProfileFormProps) {
 
   return (
     <div className="space-y-8">
+      {/* Gmail banners */}
+      {gmailBanner === 'connected' && (
+        <div className="px-4 py-3 text-sm text-green-400 bg-green-400/10 border border-green-400/20 rounded-xl">
+          Gmail connected successfully. Your outreach emails will now be sent from your Gmail account.
+        </div>
+      )}
+      {gmailBanner === 'error' && (
+        <div className="px-4 py-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl">
+          Could not connect Gmail. Please try again.
+        </div>
+      )}
+
       {/* Account Info */}
       <section>
         <h2 className="text-xl font-semibold mb-4">Account</h2>
@@ -159,6 +207,38 @@ export function ProfileForm({ data }: ProfileFormProps) {
             <div className="px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] text-gray-400">
               {new Date(data.user.created_at).toLocaleDateString()}
             </div>
+          </div>
+
+          {/* Gmail Integration */}
+          <div>
+            <label className={labelClasses}>Gmail Integration</label>
+            {gmailConnected ? (
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-green-500/40">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+                  <span className="text-sm text-gray-300">{gmailEmail ?? 'Connected'}</span>
+                </div>
+                <button
+                  onClick={handleGmailDisconnect}
+                  disabled={isDisconnecting}
+                  className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
+                >
+                  {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                </button>
+              </div>
+            ) : (
+              <a
+                href="/api/gmail"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--card-hover)] transition-colors group"
+              >
+                <svg className="w-5 h-5 text-gray-400 group-hover:text-[var(--primary)] transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                </svg>
+                <span className="text-sm text-gray-400 group-hover:text-white transition-colors">
+                  Connect Gmail to send outreach emails from your account
+                </span>
+              </a>
+            )}
           </div>
         </div>
       </section>

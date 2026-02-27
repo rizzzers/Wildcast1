@@ -196,10 +196,10 @@ export function Consultation({ quizAnswers }: ConsultationProps) {
             <div className="group reveal visible">
               <div className="flex items-baseline gap-4 mb-3">
                 <span className="text-xs font-mono text-[var(--primary)]">03</span>
-                <h3 className="text-xl font-semibold">Your Roadmap to 10K+ (and Sponsorship-Ready)</h3>
+                <h3 className="text-xl font-semibold">Your Roadmap to 10K+ (and Partnership-Ready)</h3>
               </div>
               <p className="text-gray-400 leading-relaxed ml-10">
-                A clear, step-by-step path from where you are now to where the sponsorship
+                A clear, step-by-step path from where you are now to where the partnership
                 conversations start. We want you to succeed, not just sign up.
               </p>
             </div>

@@ -23,7 +23,7 @@ export function GrowthPlan({ quizAnswers, growthPlan }: GrowthPlanProps) {
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
             Here&apos;s a personalized roadmap to grow your audience to 10K+ downloads
-            and unlock sponsor partnerships.
+            and unlock partner opportunities.
           </p>
         </div>
 
@@ -153,9 +153,9 @@ export function GrowthPlan({ quizAnswers, growthPlan }: GrowthPlanProps) {
         <div className="mt-10 text-center animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] p-[1px] rounded-2xl">
             <div className="bg-[var(--background)] rounded-2xl p-8">
-              <h3 className="text-xl font-semibold mb-2">Ready for Sponsors?</h3>
+              <h3 className="text-xl font-semibold mb-2">Ready for Partners?</h3>
               <p className="text-gray-400 mb-4">
-                Once you hit 10K downloads/episode, come back and we&apos;ll match you with sponsors ready to pay.
+                Once you hit 10K downloads/episode, come back and we&apos;ll match you with partners ready to pay.
               </p>
               <button
                 onClick={() => window.location.reload()}

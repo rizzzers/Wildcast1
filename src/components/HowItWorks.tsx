@@ -326,7 +326,7 @@ export function HowItWorks() {
             How it works
           </h2>
           <p className="text-gray-400 max-w-md mx-auto">
-            Three steps to finding sponsors that actually make sense for your show.
+            Three steps to finding partners that actually make sense for your show.
           </p>
         </div>
 
@@ -369,7 +369,7 @@ export function HowItWorks() {
           <Step
             number="02"
             title="Get matched"
-            description="Our matching engine pairs you with sponsors whose target audience overlaps with your listeners."
+            description="Our matching engine pairs you with partners whose target audience overlaps with your listeners."
             icon={<MatchIcon isVisible={isVisible} delay={500} />}
             delay={400}
             isVisible={isVisible}

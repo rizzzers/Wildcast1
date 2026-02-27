@@ -9,16 +9,22 @@ export function NavBar() {
   const { data: session } = useSession();
   const [showAuth, setShowAuth] = useState(false);
 
+  const isAuthenticated = !!session?.user;
+  const isPro = session?.user?.plan === 'pro';
+
+  // Sidebar handles navigation for authenticated users
+  if (isAuthenticated) return null;
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg" />
-            <span className="font-bold text-xl tracking-tight">Sponsor Vibe</span>
+            <img src="/images/howdi-logo-grey.png" alt="Howdi" className="w-8 h-8 object-contain" />
+            <span className="font-bold text-xl tracking-tight">Howdi</span>
           </Link>
 
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-4 md:gap-6">
             <Link
               href="/survey"
               className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
@@ -26,21 +32,30 @@ export function NavBar() {
               Take the Survey
             </Link>
 
-            {session?.user && (
+            {isAuthenticated && (
               <Link
                 href="/sponsors"
                 className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
-                Sponsors
+                Partners
               </Link>
             )}
 
-            {session?.user && (
+            {isAuthenticated && (
               <Link
                 href="/profile"
                 className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
                 Profile
+              </Link>
+            )}
+
+            {isAuthenticated && !isPro && (
+              <Link
+                href="/subscribe"
+                className="text-sm font-medium px-3 py-1.5 rounded-lg bg-[var(--primary)]/10 border border-[var(--primary)]/20 text-[var(--primary)] hover:bg-[var(--primary)]/20 transition-colors"
+              >
+                Upgrade to Pro
               </Link>
             )}
 
@@ -53,7 +68,7 @@ export function NavBar() {
               </Link>
             )}
 
-            {session?.user ? (
+            {isAuthenticated ? (
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
@@ -65,7 +80,7 @@ export function NavBar() {
                 onClick={() => setShowAuth(true)}
                 className="text-sm font-medium px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] rounded-lg transition-colors"
               >
-                Sign In
+                Create Account
               </button>
             )}
           </nav>

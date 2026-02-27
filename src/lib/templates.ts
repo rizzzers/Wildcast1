@@ -55,7 +55,7 @@ I'm the host of ${podcastInfo.podcastName}, and I believe there's a strong align
 
 ${podcastInfo.description ? `About my show: ${podcastInfo.description}\n\n` : ''}My podcast focuses on ${quizAnswers.category?.replace('-', ' ')} content with a ${quizAnswers.tone?.replace('-', ' ')} tone. We release episodes ${quizAnswers.releaseFrequency} and have built an engaged audience of ${audienceDesc}.
 
-${contextBlock}I'd love to explore a sponsorship partnership with ${sponsor.brandName}. ${podcastInfo.hasMediaKit ? 'I have a media kit ready to share.' : ''}
+${contextBlock}I'd love to explore a partnership with ${sponsor.brandName}. ${podcastInfo.hasMediaKit ? 'I have a media kit ready to share.' : ''}
 
 Would you be open to a brief call to discuss?
 
@@ -74,7 +74,7 @@ I host ${podcastInfo.podcastName} and I'm a big fan of what ${sponsor.brandName}
 
 ${podcastInfo.description ? `Quick background: ${podcastInfo.description}\n\n` : ''}My show is all about ${quizAnswers.category?.replace('-', ' ')} with a ${quizAnswers.tone?.replace('-', ' ')} vibe. I think your brand would really resonate with my listeners - they're mostly ${audienceDesc} who tune in ${quizAnswers.releaseFrequency}.
 
-${contextBlock}Would love to chat about a potential sponsorship. Got 15 minutes this week?
+${contextBlock}Would love to chat about a potential partnership. Got 15 minutes this week?
 
 Cheers,
 [Your Name]
@@ -87,7 +87,7 @@ ${podcastInfo.podcastUrl}`,
     name: 'Follow-Up',
     content: `Hi ${sponsor.contactName},
 
-I reached out recently about a potential sponsorship between ${sponsor.brandName} and my podcast, ${podcastInfo.podcastName}. I wanted to follow up in case my previous message got buried.
+I reached out recently about a potential partnership between ${sponsor.brandName} and my podcast, ${podcastInfo.podcastName}. I wanted to follow up in case my previous message got buried.
 
 ${podcastInfo.description ? `A quick refresher: ${podcastInfo.description}\n\n` : ''}We cover ${quizAnswers.category?.replace('-', ' ')} content for an audience of ${audienceDesc}, and I think there's a natural fit with ${sponsor.brandName}.
 
@@ -124,7 +124,7 @@ ${podcastInfo.podcastUrl}`,
     name: 'LinkedIn Follow-Up',
     content: `Hi ${sponsor.contactName},
 
-I recently reached out via email about a potential sponsorship between ${sponsor.brandName} and my podcast, ${podcastInfo.podcastName}. I wanted to connect here as well.
+I recently reached out via email about a potential partnership between ${sponsor.brandName} and my podcast, ${podcastInfo.podcastName}. I wanted to connect here as well.
 
 ${podcastInfo.description ? `Quick intro: ${podcastInfo.description}\n\n` : ''}My show covers ${quizAnswers.category?.replace('-', ' ')} for an audience of ${audienceDesc}, and I think there's a natural fit with what ${sponsor.brandName} is doing.
 
@@ -141,5 +141,5 @@ export function getEmailSubject(
   sponsor: SponsorMatch,
   podcastInfo: PodcastInfo
 ): string {
-  return `Podcast Sponsorship Opportunity - ${podcastInfo.podcastName}`;
+  return `Podcast Partnership Opportunity - ${podcastInfo.podcastName}`;
 }

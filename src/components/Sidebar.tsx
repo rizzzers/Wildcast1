@@ -25,7 +25,7 @@ const navItems: { id: NavItemId; label: string; href: string; icon: React.ReactN
   },
   {
     id: 'sponsors',
-    label: 'Sponsors',
+    label: 'Partners',
     href: '/sponsors',
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,12 +127,8 @@ export function Sidebar({ activeTab, user, gmailConnected }: SidebarProps) {
       {/* Logo */}
       <div className="p-6 border-b border-[var(--border)]">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3a9 9 0 100 18A9 9 0 0012 3zm0 16a7 7 0 110-14 7 7 0 010 14zm-1-9v4l3 1.5-.75 1.5L10 15V10h2z"/>
-            </svg>
-          </div>
-          <span className="font-bold text-lg tracking-tight">Wildcast</span>
+          <img src="/images/howdi-logo-grey.png" alt="Howdi" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-lg tracking-tight">Howdi</span>
         </Link>
       </div>
 

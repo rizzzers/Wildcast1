@@ -14,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sponsor Vibe - Find Podcast Sponsors",
-  description: "Match with the perfect sponsors for your podcast",
+  title: "Howdi - Find Podcast Partners",
+  description: "Match with the perfect partners for your podcast",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

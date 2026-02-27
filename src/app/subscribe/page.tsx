@@ -10,10 +10,10 @@ export default function SubscribePage() {
       <main className="pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto text-center mb-16">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-            Unlock every sponsor match
+            Unlock every partner match
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto">
-            Get unlimited access to sponsor contacts tailored to your podcast.
+            Get unlimited access to partner contacts tailored to your podcast.
           </p>
         </div>
 
@@ -21,14 +21,14 @@ export default function SubscribePage() {
           {/* Free Plan */}
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8">
             <h2 className="text-lg font-semibold mb-1">Free</h2>
-            <p className="text-sm text-gray-400 mb-6">Get started finding sponsors</p>
+            <p className="text-sm text-gray-400 mb-6">Get started finding partners</p>
             <div className="text-3xl font-bold mb-6">
               $0<span className="text-base font-normal text-gray-500">/mo</span>
             </div>
             <ul className="space-y-3 mb-8 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-[var(--primary)] mt-0.5">&#10003;</span>
-                <span>Up to 13 matched sponsors</span>
+                <span>Up to 13 matched partners</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-[var(--primary)] mt-0.5">&#10003;</span>
@@ -61,7 +61,7 @@ export default function SubscribePage() {
             <ul className="space-y-3 mb-8 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-[var(--primary)] mt-0.5">&#10003;</span>
-                <span>Unlimited sponsor matches</span>
+                <span>Unlimited partner matches</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-[var(--primary)] mt-0.5">&#10003;</span>

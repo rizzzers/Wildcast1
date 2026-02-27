@@ -11,6 +11,8 @@ export interface QuizQuestionDef {
   multiSelect?: boolean;
 }
 
+export const coreQuizQuestionIds = ['category', 'audienceSize', 'listenerType'] as const;
+
 export const quizQuestions: QuizQuestionDef[] = [
   {
     id: 'category',
@@ -30,7 +32,7 @@ export const quizQuestions: QuizQuestionDef[] = [
     question: "What's your average audience reach per week?",
     options: [
       { value: 'under-10k', label: 'Under 10,000', description: 'Growing audience, building momentum' },
-      { value: 'over-10k', label: '10,000+', description: 'Established audience, ready for sponsors' },
+      { value: 'over-10k', label: '10,000+', description: 'Established audience, ready for partners' },
     ],
   },
   {
@@ -80,7 +82,7 @@ export const quizQuestions: QuizQuestionDef[] = [
     id: 'primaryGoal',
     question: "What's your primary goal right now?",
     options: [
-      { value: 'sponsorships', label: 'Land Sponsorships', description: 'Ready to monetize with brand deals' },
+      { value: 'sponsorships', label: 'Land Partnerships', description: 'Ready to monetize with brand deals' },
       { value: 'grow-audience', label: 'Grow My Audience', description: 'Focus on reaching more listeners' },
       { value: 'both', label: 'Both', description: 'Grow and monetize simultaneously' },
     ],

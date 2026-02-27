@@ -133,7 +133,7 @@ export function EmailGate({ onSubmit }: EmailGateProps) {
               className="w-5 h-5 rounded border-[var(--border)] bg-[var(--card)] text-[var(--primary)] focus:ring-[var(--primary)]"
             />
             <label htmlFor="hasMediaKit" className="text-sm text-gray-300">
-              I have a media kit ready for sponsors
+              I have a media kit ready for partners
             </label>
           </div>
 

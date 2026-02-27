@@ -22,7 +22,7 @@ export default function Home() {
           <div className="opacity-0 animate-hero-up delay-100">
             <span className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full text-xs font-medium tracking-[0.2em] uppercase border border-white/[0.08] bg-white/[0.03]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
-              The podcast sponsorship platform
+              The podcast partner platform
             </span>
           </div>
 
@@ -30,7 +30,7 @@ export default function Home() {
           <h1 className="mt-10 text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-[-0.03em] leading-[0.95] opacity-0 animate-hero-up delay-300">
             Your podcast
             <br />
-            deserves sponsors.
+            deserves partners.
           </h1>
 
           {/* Decorative line */}
@@ -50,7 +50,7 @@ export default function Home() {
               href="/survey"
               className="group inline-flex items-center gap-3 px-10 py-5 bg-white text-[var(--background)] font-semibold rounded-full hover:bg-gray-100 transition-all duration-300 text-base hover:shadow-[0_0_40px_rgba(139,92,246,0.15)]"
             >
-              Find Your Sponsors
+              Find Your Partners
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="transition-transform duration-300 group-hover:translate-x-1">
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -66,8 +66,8 @@ export default function Home() {
           <div className="relative rounded-3xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-[var(--primary)]/[0.05]">
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)] via-transparent to-transparent z-10 pointer-events-none" />
             <Image
-              src="https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=1400&h=600&fit=crop&crop=center"
-              alt="Podcaster recording in a professional studio"
+              src="/images/soundtrap-UKyJ3rWHNt8-unsplash.jpg"
+              alt="Podcaster with headphones and microphone"
               width={1400}
               height={600}
               className="w-full h-[300px] md:h-[420px] object-cover"
@@ -90,7 +90,7 @@ export default function Home() {
 
           <ScrollReveal delay={100}>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.1] mb-8 text-balance">
-              Finding sponsors shouldn&apos;t feel like shouting into the void.
+              Finding partners shouldn&apos;t feel like shouting into the void.
             </h2>
           </ScrollReveal>
 
@@ -99,8 +99,8 @@ export default function Home() {
             <div className="relative rounded-2xl overflow-hidden mb-10 border border-white/[0.04]">
               <div className="absolute inset-0 bg-gradient-to-r from-[var(--background)]/80 to-transparent z-10 pointer-events-none" />
               <Image
-                src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1200&h=400&fit=crop&crop=center"
-                alt="Sound mixing board in warm studio light"
+                src="/images/jeremy-enns-1vrWiQvtxW8-unsplash.jpg"
+                alt="Podcaster recording in a plant-filled studio"
                 width={1200}
                 height={400}
                 className="w-full h-[200px] md:h-[280px] object-cover"
@@ -120,8 +120,8 @@ export default function Home() {
             <ScrollReveal delay={300}>
               <p>
                 But when it comes to monetization, you&apos;re stuck. You Google &ldquo;how to get
-                podcast sponsors.&rdquo; You send cold emails to generic info@ addresses. You fill
-                out forms on sponsorship marketplaces and hear nothing back. You start to
+                podcast partners.&rdquo; You send cold emails to generic info@ addresses. You fill
+                out forms on partnership marketplaces and hear nothing back. You start to
                 wonder if your show just isn&apos;t big enough.
               </p>
             </ScrollReveal>
@@ -134,7 +134,7 @@ export default function Home() {
 
             <ScrollReveal delay={500}>
               <p>
-                The brands who would love to sponsor your show? They exist. They have budgets
+                The brands who would love to partner with your show? They exist. They have budgets
                 allocated for podcast advertising. They&apos;re looking for creators exactly like
                 you. They just don&apos;t know you exist yet.
               </p>
@@ -167,8 +167,8 @@ export default function Home() {
 
           <ScrollReveal delay={200}>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed font-light mb-16">
-              Sponsor Vibe isn&apos;t a marketplace where you wait to be discovered. It&apos;s a matching
-              engine that connects your podcast with sponsor contacts -- real names, real emails,
+              Howdi isn&apos;t a marketplace where you wait to be discovered. It&apos;s a matching
+              engine that connects your podcast with partner contacts -- real names, real emails,
               real decision-makers -- based on who your audience actually is.
             </p>
           </ScrollReveal>
@@ -187,7 +187,7 @@ export default function Home() {
                 <h3 className="text-lg font-semibold mb-2">Precision matching</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">
                   We don&apos;t blast your profile to hundreds of brands. We analyze your category,
-                  audience, tone, and format to find the sponsors that genuinely fit.
+                  audience, tone, and format to find the partners that genuinely fit.
                 </p>
               </div>
             </ScrollReveal>
@@ -218,7 +218,7 @@ export default function Home() {
                 <h3 className="text-lg font-semibold mb-2">Direct contact</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">
                   Names, emails, LinkedIn profiles, phone numbers. The actual people who
-                  make sponsorship decisions -- not a generic submissions portal.
+                  make partnership decisions -- not a generic submissions portal.
                 </p>
               </div>
             </ScrollReveal>
@@ -293,7 +293,7 @@ export default function Home() {
                 From mic to money.
               </h2>
               <p className="text-gray-400 max-w-lg mx-auto leading-relaxed">
-                Watch how podcasters go from recording to reaching out to sponsors -- all in one seamless flow.
+                Watch how podcasters go from recording to reaching out to partners -- all in one seamless flow.
               </p>
             </div>
           </ScrollReveal>
@@ -310,7 +310,7 @@ export default function Home() {
                 loop
                 playsInline
                 className="w-full h-[300px] md:h-[480px] object-cover"
-                poster="https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=1400&h=600&fit=crop"
+                poster="/images/flipsnack-4GyrlS5-PGM-unsplash.jpg"
               >
                 <source src="https://videos.pexels.com/video-files/6953963/6953963-uhd_2560_1440_30fps.mp4" type="video/mp4" />
               </video>
@@ -366,14 +366,14 @@ export default function Home() {
 
                 <ScrollReveal delay={400}>
                   <p className="text-[var(--foreground)]">
-                    The sponsors are out there. The gap isn&apos;t your audience size -- it&apos;s
+                    The partners are out there. The gap isn&apos;t your audience size -- it&apos;s
                     that nobody has made the introduction yet.
                   </p>
                 </ScrollReveal>
 
                 <ScrollReveal delay={500}>
                   <p>
-                    That&apos;s what Sponsor Vibe does. We make the introduction.
+                    That&apos;s what Howdi does. We make the introduction.
                   </p>
                 </ScrollReveal>
               </div>
@@ -392,7 +392,7 @@ export default function Home() {
                     <div>
                       <h3 className="font-semibold mb-1">Any audience size</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">
-                        10K+ downloads per episode? You&apos;ll get matched with sponsor contacts
+                        10K+ downloads per episode? You&apos;ll get matched with partner contacts
                         immediately. Under 10K? You&apos;ll get a personalized growth plan to
                         help you get there.
                       </p>
@@ -434,7 +434,7 @@ export default function Home() {
                       <h3 className="font-semibold mb-1">Save your own templates</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">
                         Found a pitch that works? Save it as a reusable template. Your
-                        saved templates auto-fill with each sponsor&apos;s details, so
+                        saved templates auto-fill with each partner&apos;s details, so
                         you&apos;re always personal, never generic.
                       </p>
                     </div>
@@ -454,7 +454,7 @@ export default function Home() {
                     <div>
                       <h3 className="font-semibold mb-1">No middlemen</h3>
                       <p className="text-sm text-gray-400 leading-relaxed">
-                        Most platforms sit between you and the sponsor, taking a cut.
+                        Most platforms sit between you and the partner, taking a cut.
                         We give you the contact directly. The relationship is yours.
                         The revenue is yours. The terms are yours.
                       </p>
@@ -474,7 +474,7 @@ export default function Home() {
         {/* Background image - subtle, desaturated */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1800&h=800&fit=crop&crop=center"
+            src="/images/or-hakim-Vc6yFhlWHT4-unsplash.jpg"
             alt=""
             fill
             className="object-cover opacity-[0.04]"
@@ -499,7 +499,7 @@ export default function Home() {
             <div className="mt-10 flex items-center justify-center gap-3">
               <div className="h-px w-8 bg-[var(--primary)]/40" />
               <span className="text-sm text-gray-500 tracking-wide">
-                The Sponsor Vibe Philosophy
+                The Howdi Philosophy
               </span>
               <div className="h-px w-8 bg-[var(--primary)]/40" />
             </div>
@@ -522,7 +522,7 @@ export default function Home() {
             <h2 className="text-3xl sm:text-4xl font-bold tracking-[-0.02em] leading-[1.1] mb-16">
               Everything you need to land
               <br />
-              <span className="text-gray-500">your first (or next) sponsor.</span>
+              <span className="text-gray-500">your first (or next) partner.</span>
             </h2>
           </ScrollReveal>
 
@@ -531,7 +531,7 @@ export default function Home() {
               <div className="group">
                 <div className="flex items-baseline gap-4 mb-3">
                   <span className="text-xs font-mono text-[var(--primary)]">01</span>
-                  <h3 className="text-xl font-semibold">Sponsor matches tailored to your show</h3>
+                  <h3 className="text-xl font-semibold">Partner matches tailored to your show</h3>
                 </div>
                 <p className="text-gray-400 leading-relaxed ml-10">
                   Based on your category, audience demographics, content tone, and release schedule,
@@ -549,7 +549,7 @@ export default function Home() {
                 </div>
                 <p className="text-gray-400 leading-relaxed ml-10">
                   Every match includes the name and title of the person at the brand who
-                  handles podcast sponsorships, their direct email, LinkedIn profile, and
+                  handles podcast partnerships, their direct email, LinkedIn profile, and
                   when available, their phone number. No generic contact forms.
                 </p>
               </div>
@@ -563,7 +563,7 @@ export default function Home() {
                 </div>
                 <p className="text-gray-400 leading-relaxed ml-10">
                   Four professionally crafted outreach templates that auto-fill with your
-                  podcast details and the sponsor&apos;s information. Professional, casual,
+                  podcast details and the partner&apos;s information. Professional, casual,
                   follow-up, and data-driven variants. Edit them, save your own, and send
                   directly from the platform.
                 </p>
@@ -579,7 +579,7 @@ export default function Home() {
                 <p className="text-gray-400 leading-relaxed ml-10">
                   Under 10,000 downloads per episode? No problem. Instead of matches, you&apos;ll
                   receive a personalized consultation with actionable steps to grow your audience
-                  to a sponsor-ready size. We want you to succeed, not just sign up.
+                  to a partner-ready size. We want you to succeed, not just sign up.
                 </p>
               </div>
             </ScrollReveal>
@@ -595,8 +595,8 @@ export default function Home() {
           <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-4">
             <div className="relative rounded-2xl overflow-hidden border border-white/[0.04] h-[200px] md:h-[280px]">
               <Image
-                src="https://images.unsplash.com/photo-1589903308904-1010c2294adc?w=600&h=400&fit=crop&crop=center"
-                alt="Podcast microphone close-up"
+                src="/images/videodeck-co-FD8ac8iw0sc-unsplash.jpg"
+                alt="Podcast host smiling with headphones and microphone"
                 fill
                 className="object-cover hover:scale-105 transition-transform duration-700"
               />
@@ -604,8 +604,8 @@ export default function Home() {
             </div>
             <div className="relative rounded-2xl overflow-hidden border border-white/[0.04] h-[200px] md:h-[280px]">
               <Image
-                src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&h=400&fit=crop&crop=center"
-                alt="Business meeting and handshake"
+                src="/images/tim-mossholder-eoNL6y4C2JQ-unsplash.jpg"
+                alt="Smiling podcaster with headphones and microphone"
                 fill
                 className="object-cover hover:scale-105 transition-transform duration-700"
               />
@@ -613,8 +613,8 @@ export default function Home() {
             </div>
             <div className="relative rounded-2xl overflow-hidden border border-white/[0.04] h-[200px] md:h-[280px]">
               <Image
-                src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&h=400&fit=crop&crop=center"
-                alt="Creative team collaborating"
+                src="/images/dan-lefebvre-Cbzv4DNS8Ew-unsplash.jpg"
+                alt="Woman with headphones enjoying a podcast"
                 fill
                 className="object-cover hover:scale-105 transition-transform duration-700"
               />
@@ -633,7 +633,7 @@ export default function Home() {
         <div className="relative max-w-2xl mx-auto text-center">
           <ScrollReveal>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.1] mb-6">
-              Your next sponsor is
+              Your next partner is
               <br />
               <span className="gradient-text-primary">waiting to hear from you.</span>
             </h2>
@@ -660,22 +660,70 @@ export default function Home() {
 
           <ScrollReveal delay={300}>
             <p className="mt-6 text-sm text-gray-600">
-              No credit card. No commitment. Just clarity on who your sponsors should be.
+              No credit card. No commitment. Just clarity on who your partners should be.
             </p>
           </ScrollReveal>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg" />
-              <span className="text-sm font-medium text-gray-400">Sponsor Vibe</span>
+      <footer className="border-t border-white/[0.06] mt-8">
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          {/* Top row */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2.5 mb-4">
+                <img src="/images/howdi-logo-grey.png" alt="Howdi" className="w-7 h-7 object-contain" />
+                <span className="font-bold text-base text-gray-300">Howdi</span>
+              </div>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Connecting podcasters with the right partners. Built for creators who are serious about growing their show.
+              </p>
             </div>
-            <p className="text-sm text-gray-600">
-              Questions? <a href="mailto:ryan@ryanestes.info" className="text-gray-400 hover:text-white transition-colors duration-300">ryan@ryanestes.info</a>
+
+            {/* Product */}
+            <div>
+              <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><Link href="/survey" className="text-sm text-gray-400 hover:text-white transition-colors">Find Partners</Link></li>
+                <li><Link href="/sponsors" className="text-sm text-gray-400 hover:text-white transition-colors">My Matches</Link></li>
+                <li><Link href="/subscribe" className="text-sm text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/survey" className="text-sm text-gray-400 hover:text-white transition-colors">Take the Survey</Link></li>
+              </ul>
+            </div>
+
+            {/* For Podcasters */}
+            <div>
+              <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">For Podcasters</h4>
+              <ul className="space-y-3">
+                <li><Link href="/survey" className="text-sm text-gray-400 hover:text-white transition-colors">Get Matched</Link></li>
+                <li><Link href="/subscribe" className="text-sm text-gray-400 hover:text-white transition-colors">Upgrade to Pro</Link></li>
+                <li><Link href="/profile" className="text-sm text-gray-400 hover:text-white transition-colors">Your Profile</Link></li>
+                <li><Link href="/profile?tab=outreach" className="text-sm text-gray-400 hover:text-white transition-colors">Outreach History</Link></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-gray-500 mb-4">Company</h4>
+              <ul className="space-y-3">
+                <li><a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">About</a></li>
+                <li><a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-white/[0.06] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-gray-600">
+              &copy; {new Date().getFullYear()} Howdi. All rights reserved.
+            </p>
+            <p className="text-xs text-gray-600">
+              Helping podcasters find the right partners — one introduction at a time.
             </p>
           </div>
         </div>

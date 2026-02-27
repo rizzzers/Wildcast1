@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { SponsorResults } from '@/components/SponsorResults';
-import { NavBar } from '@/components/NavBar';
+import { DashboardShell } from '@/components/DashboardShell';
 import { QuizAnswers, PodcastInfo } from '@/types';
 import { ContactMatch } from '@/lib/contact-matching';
 
@@ -16,6 +16,21 @@ export default function SponsorsPage() {
   const [totalMatches, setTotalMatches] = useState(0);
   const [isLimited, setIsLimited] = useState(false);
   const [outreachHistory, setOutreachHistory] = useState<{ sponsor_id: string; sent_at: string }[]>([]);
+  const [scoringMethod, setScoringMethod] = useState<string>('keyword');
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchMatches = useCallback(
+    async (answers: QuizAnswers, podcast: PodcastInfo | null) => {
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quizAnswers: answers, podcastInfo: podcast }),
+      });
+      return res.json();
+    },
+    [],
+  );
 
   // Fetch user's profile data and build quiz/podcast info from it
   useEffect(() => {
@@ -26,7 +41,7 @@ export default function SponsorsPage() {
 
     fetch('/api/user/profile')
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         if (data.error || !data.submission) {
           setLoading(false);
           return;
@@ -48,48 +63,77 @@ export default function SponsorsPage() {
         };
         setQuizAnswers(answers);
 
-        setPodcastInfo({
+        const podcast: PodcastInfo = {
           email: s.email || data.user?.email || '',
           podcastName: s.podcast_name || '',
           podcastUrl: s.podcast_url || '',
           description: s.description || '',
           hasMediaKit: !!s.has_media_kit,
-        });
+        };
+        setPodcastInfo(podcast);
 
         // Fetch matches using user's actual quiz answers
-        return fetch('/api/contacts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(answers),
-        });
-      })
-      .then((res) => res?.json())
-      .then((data) => {
-        if (data && !data.error) {
-          setMatches(data.matches);
-          setTotalMatches(data.total);
-          setIsLimited(data.limited);
+        const matchData = await fetchMatches(answers, podcast);
+        if (matchData && !matchData.error) {
+          setMatches(matchData.matches);
+          setTotalMatches(matchData.total);
+          setIsLimited(matchData.limited);
+          setScoringMethod(matchData.scoringMethod || 'keyword');
+
+          // If AI scoring is pending, schedule a retry
+          if (matchData.scoringMethod === 'ai-pending') {
+            setAiEnhancing(true);
+            retryTimerRef.current = setTimeout(async () => {
+              try {
+                const retryData = await fetchMatches(answers, podcast);
+                if (retryData && !retryData.error) {
+                  setMatches(retryData.matches);
+                  setTotalMatches(retryData.total);
+                  setIsLimited(retryData.limited);
+                  setScoringMethod(retryData.scoringMethod || 'keyword');
+                }
+              } catch {
+                // AI retry failed, keyword results remain
+              } finally {
+                setAiEnhancing(false);
+              }
+            }, 5000);
+          }
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [status]);
+
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
+  }, [status, fetchMatches]);
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <NavBar />
+    <DashboardShell activeTab="sponsors">
+      <main className="pt-6">
+        {aiEnhancing && (
+          <div className="max-w-4xl mx-auto px-6 mb-2">
+            <div className="flex items-center gap-2 text-sm text-gray-400 animate-pulse">
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Enhancing matches with AI...
+            </div>
+          </div>
+        )}
 
-      <main className="pt-20">
         {loading || status === 'loading' ? (
           <div className="pt-24 text-center text-gray-400">Loading your matches...</div>
         ) : !session ? (
           <div className="pt-24 text-center text-gray-400">
-            Please sign in to see your sponsor matches.
+            Please sign in to see your partner matches.
           </div>
         ) : !quizAnswers ? (
           <div className="pt-24 text-center">
             <p className="text-gray-400 mb-4">
-              Complete the survey first so we can match you with the right sponsors.
+              Complete the survey first so we can match you with the right partners.
             </p>
             <a
               href="/survey"
@@ -117,10 +161,10 @@ export default function SponsorsPage() {
                       You&apos;re seeing {matches.length} of {totalMatches} matches
                     </p>
                     <h3 className="text-xl font-bold mb-2">
-                      Unlock all {totalMatches} sponsor opportunities
+                      Unlock all {totalMatches} partner opportunities
                     </h3>
                     <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                      Subscribe to get full access to every matched sponsor, plus priority contact details and outreach templates.
+                      Subscribe to get full access to every matched partner, plus priority contact details and outreach templates.
                     </p>
                     <a
                       href="/subscribe"
@@ -135,6 +179,6 @@ export default function SponsorsPage() {
           </>
         )}
       </main>
-    </div>
+    </DashboardShell>
   );
 }

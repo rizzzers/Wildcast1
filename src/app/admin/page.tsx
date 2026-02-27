@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { NavBar } from '@/components/NavBar';
+import { useSearchParams } from 'next/navigation';
+import { DashboardShell } from '@/components/DashboardShell';
 
 type Tab = 'overview' | 'users' | 'submissions' | 'outreach' | 'contacts';
 
@@ -86,9 +87,20 @@ interface AdminContact {
   created_at: string;
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const { data: session, status } = useSession();
-  const [tab, setTab] = useState<Tab>('overview');
+  const searchParams = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const tab: Tab = (rawTab === 'users' || rawTab === 'submissions' || rawTab === 'outreach' || rawTab === 'contacts')
+    ? rawTab
+    : 'overview';
+
+  const activeTabId = tab === 'overview' ? 'admin'
+    : tab === 'users' ? 'admin-users'
+    : tab === 'submissions' ? 'admin-submissions'
+    : tab === 'outreach' ? 'admin-outreach'
+    : 'admin-contacts';
+
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -108,6 +120,17 @@ export default function AdminPage() {
       setLoading(false);
     }
   }, [status, session]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || session?.user?.role !== 'admin') return;
+    if (tab === 'users' && users.length === 0) fetchUsers();
+    if (tab === 'submissions' && submissions.length === 0) fetchSubmissions();
+    if (tab === 'outreach' && contactTallies.length === 0) fetchOutreach();
+    if (tab === 'contacts') {
+      if (allContacts.length === 0) fetchContacts();
+      if (users.length === 0) fetchUsers();
+    }
+  }, [tab, status, session]);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -158,7 +181,6 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId, assignedUserId: userId }),
       });
-      // Update local state
       setAllContacts((prev) =>
         prev.map((c) => {
           if (c.id !== contactId) return c;
@@ -187,78 +209,33 @@ export default function AdminPage() {
     }
   };
 
-  const handleTabChange = (newTab: Tab) => {
-    setTab(newTab);
-    if (newTab === 'users' && users.length === 0) fetchUsers();
-    if (newTab === 'submissions' && submissions.length === 0) fetchSubmissions();
-    if (newTab === 'outreach' && contactTallies.length === 0) fetchOutreach();
-    if (newTab === 'contacts') {
-      if (allContacts.length === 0) fetchContacts();
-      if (users.length === 0) fetchUsers(); // need users for assignment dropdown
-    }
-  };
-
   if (loading || status === 'loading') {
     return (
-      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        <NavBar />
-        <main className="pt-24 px-6">
-          <div className="max-w-6xl mx-auto text-center text-gray-400">Loading...</div>
-        </main>
-      </div>
+      <DashboardShell activeTab="admin">
+        <div className="p-8 text-center text-gray-400">Loading...</div>
+      </DashboardShell>
     );
   }
 
   if (session?.user?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        <NavBar />
-        <main className="pt-24 px-6">
-          <div className="max-w-6xl mx-auto text-center text-gray-400">
-            Access denied. Admin privileges required.
-          </div>
-        </main>
-      </div>
+      <DashboardShell activeTab="admin">
+        <div className="p-8 text-center text-gray-400">
+          Access denied. Admin privileges required.
+        </div>
+      </DashboardShell>
     );
   }
 
-  const tabClasses = (t: Tab) =>
-    `px-6 py-3 text-sm font-medium rounded-lg transition-colors ${
-      tab === t
-        ? 'bg-[var(--primary)] text-white'
-        : 'text-gray-400 hover:text-white hover:bg-[var(--card)]'
-    }`;
-
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <NavBar />
-      <main className="pt-24 pb-16 px-6">
+    <DashboardShell activeTab={activeTabId}>
+      <div className="p-8">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
-
-          {/* Tabs */}
-          <div className="flex gap-2 mb-8">
-            <button onClick={() => handleTabChange('overview')} className={tabClasses('overview')}>
-              Overview
-            </button>
-            <button onClick={() => handleTabChange('users')} className={tabClasses('users')}>
-              Users
-            </button>
-            <button onClick={() => handleTabChange('submissions')} className={tabClasses('submissions')}>
-              Submissions
-            </button>
-            <button onClick={() => handleTabChange('outreach')} className={tabClasses('outreach')}>
-              Outreach
-            </button>
-            <button onClick={() => handleTabChange('contacts')} className={tabClasses('contacts')}>
-              Contacts
-            </button>
-          </div>
 
           {/* Overview Tab */}
           {tab === 'overview' && stats && (
             <div className="space-y-8 animate-fade-in">
-              {/* Stat Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6">
                   <div className="text-sm text-gray-400 mb-1">Total Users</div>
@@ -274,7 +251,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Recent Submissions */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Recent Submissions</h2>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden">
@@ -413,7 +389,6 @@ export default function AdminPage() {
 
             return (
               <div className="space-y-4 animate-fade-in">
-                {/* Search + count */}
                 <div className="flex items-center justify-between gap-4">
                   <input
                     type="text"
@@ -427,7 +402,6 @@ export default function AdminPage() {
                   </span>
                 </div>
 
-                {/* Contact cards */}
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden">
                   {filtered.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
@@ -440,7 +414,6 @@ export default function AdminPage() {
 
                         return (
                           <div key={contact.id}>
-                            {/* Contact summary row */}
                             <div className="flex items-center gap-4 p-4 hover:bg-[var(--card-hover)] transition-colors">
                               <button
                                 onClick={() => setExpandedContactDetail(isExpanded ? null : contact.id)}
@@ -483,7 +456,6 @@ export default function AdminPage() {
                                 </svg>
                               </button>
 
-                              {/* Assign dropdown */}
                               <div className="flex-shrink-0">
                                 <select
                                   value={contact.assigned_user_id || ''}
@@ -500,7 +472,6 @@ export default function AdminPage() {
                               </div>
                             </div>
 
-                            {/* Expanded detail */}
                             {isExpanded && (
                               <div className="bg-[var(--background)] border-t border-[var(--border)] px-6 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
@@ -598,7 +569,6 @@ export default function AdminPage() {
           {/* Outreach Tab */}
           {tab === 'outreach' && (
             <div className="space-y-6 animate-fade-in">
-              {/* Summary stat */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6">
                   <div className="text-sm text-gray-400 mb-1">Total Emails Sent</div>
@@ -616,7 +586,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Contact tallies with expandable emails */}
               <div>
                 <h2 className="text-xl font-semibold mb-4">Emails by Contact</h2>
                 <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden">
@@ -632,7 +601,6 @@ export default function AdminPage() {
 
                         return (
                           <div key={contact.contact_email}>
-                            {/* Contact row */}
                             <button
                               onClick={() =>
                                 setExpandedContact(isExpanded ? null : contact.contact_email)
@@ -680,7 +648,6 @@ export default function AdminPage() {
                               </div>
                             </button>
 
-                            {/* Expanded email list */}
                             {isExpanded && (
                               <div className="bg-[var(--background)] border-t border-[var(--border)]">
                                 {emails.map((email) => {
@@ -744,7 +711,6 @@ export default function AdminPage() {
                                         </div>
                                       </button>
 
-                                      {/* Email content */}
                                       {isEmailExpanded && email.email_content && (
                                         <div className="px-6 pb-4">
                                           {email.email_subject && (
@@ -778,7 +744,19 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-[var(--background)] text-gray-400">
+        Loading...
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   );
 }

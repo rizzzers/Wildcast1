@@ -27,7 +27,7 @@ export function NavBar() {
           <nav className="flex items-center gap-4 md:gap-6">
             <Link
               href="/survey"
-              className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
+              className="hidden md:inline text-sm font-medium text-gray-400 hover:text-white transition-colors"
             >
               Take the Survey
             </Link>

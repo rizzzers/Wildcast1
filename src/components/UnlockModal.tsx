@@ -60,8 +60,10 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
     onClose();
   };
 
+  const inputClass = 'w-full px-4 py-3 bg-[var(--background)] border border-[var(--border)] rounded-xl focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent outline-none transition-colors';
+
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Unlock Your Matches" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Unlock Your Matches" maxWidth="md">
       <div className="space-y-5">
         <p className="text-gray-400 text-sm">
           Enter your details to reveal contact names, emails, and LinkedIn profiles.
@@ -84,7 +86,7 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors"
+              className={inputClass}
               placeholder="you@example.com"
             />
           </div>
@@ -100,7 +102,7 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
                 value={podcastName}
                 onChange={(e) => setPodcastName(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors"
+                className={inputClass}
                 placeholder="The Daily Hustle"
               />
             </div>
@@ -114,7 +116,7 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
                 value={podcastUrl}
                 onChange={(e) => setPodcastUrl(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors"
+                className={inputClass}
                 placeholder="https://podcasts.apple.com/..."
               />
             </div>
@@ -129,7 +131,7 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors resize-none"
+              className={`${inputClass} resize-none`}
               placeholder="What's your show about?"
             />
           </div>
@@ -168,24 +170,24 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
               <div className="px-4 pb-4 space-y-3 border-t border-[var(--border)]">
                 <p className="text-xs text-gray-500 pt-3">Create a password to save your matches and come back anytime.</p>
                 <div>
-                  <label htmlFor="unlock-name" className="block text-sm font-medium mb-1">Name</label>
+                  <label htmlFor="unlock-name" className="block text-sm font-medium mb-2">Name</label>
                   <input
                     type="text"
                     id="unlock-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors"
+                    className={inputClass}
                     placeholder="Jane Smith"
                   />
                 </div>
                 <div>
-                  <label htmlFor="unlock-password" className="block text-sm font-medium mb-1">Password</label>
+                  <label htmlFor="unlock-password" className="block text-sm font-medium mb-2">Password</label>
                   <input
                     type="password"
                     id="unlock-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--background)] border-2 border-[var(--border)] focus:border-[var(--primary)] focus:outline-none transition-colors"
+                    className={inputClass}
                     placeholder="At least 8 characters"
                     minLength={8}
                   />
@@ -204,7 +206,7 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
                   type="button"
                   onClick={handleGoogleSignIn}
                   disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-[var(--border)] rounded-xl hover:bg-[var(--background)] transition-colors disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[var(--border)] rounded-xl hover:bg-[var(--background)] transition-colors disabled:opacity-50"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -221,9 +223,13 @@ export function UnlockModal({ isOpen, onClose, onUnlock }: UnlockModalProps) {
           <button
             type="submit"
             disabled={!isValid || isSubmitting}
-            className="w-full py-4 px-6 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full px-4 py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
           >
-            {isSubmitting ? 'Unlocking...' : 'Unlock My Matches'}
+            {isSubmitting ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              'Unlock My Matches'
+            )}
           </button>
         </form>
 

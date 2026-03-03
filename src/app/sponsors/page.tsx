@@ -7,6 +7,26 @@ import { DashboardShell } from '@/components/DashboardShell';
 import { QuizAnswers, PodcastInfo } from '@/types';
 import { ContactMatch } from '@/lib/contact-matching';
 
+const CPM_RATES: Record<string, { cpmLow: number; cpmHigh: number; epLow: number; epHigh: number }> = {
+  'tech':          { cpmLow: 25, cpmHigh: 50,  epLow: 2500, epHigh: 8000 },
+  'business':      { cpmLow: 22, cpmHigh: 45,  epLow: 2000, epHigh: 7000 },
+  'wellness':      { cpmLow: 18, cpmHigh: 40,  epLow: 1800, epHigh: 6500 },
+  'pop-culture':   { cpmLow: 14, cpmHigh: 28,  epLow: 1200, epHigh: 5000 },
+  'education':     { cpmLow: 20, cpmHigh: 40,  epLow: 1800, epHigh: 6000 },
+  'entertainment': { cpmLow: 14, cpmHigh: 32,  epLow: 1200, epHigh: 5500 },
+  'multi-topic':   { cpmLow: 13, cpmHigh: 28,  epLow: 1000, epHigh: 4500 },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'tech':          'Tech & Startups',
+  'business':      'Business',
+  'wellness':      'Health & Wellness',
+  'pop-culture':   'Pop Culture',
+  'education':     'Education',
+  'entertainment': 'Entertainment',
+  'multi-topic':   'Multi-Topic',
+};
+
 export default function SponsorsPage() {
   const { data: session, status } = useSession();
   const [matches, setMatches] = useState<ContactMatch[]>([]);
@@ -22,6 +42,7 @@ export default function SponsorsPage() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tokensRemaining, setTokensRemaining] = useState(0);
   const [tokenRefreshKey, setTokenRefreshKey] = useState(0);
+  const [showRateBanner, setShowRateBanner] = useState(true);
 
   const fetchMatches = useCallback(
     async (answers: QuizAnswers, podcast: PodcastInfo | null) => {
@@ -230,6 +251,36 @@ export default function SponsorsPage() {
               <div className="max-w-4xl mx-auto px-6 mb-4">
                 <div className="flex items-center justify-between gap-4 px-5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-gray-400">
                   <span>Showing all partners — <a href="/survey" className="text-[var(--primary)] hover:underline">complete a quick survey</a> to get personalized matches ranked for your podcast.</span>
+                </div>
+              </div>
+            )}
+            {showRateBanner && quizAnswers.category && quizAnswers.audienceSize === 'over-10k' && matches.length > 0 && CPM_RATES[quizAnswers.category] && (
+              <div className="max-w-4xl mx-auto px-6 mb-4">
+                <div className="flex items-start justify-between gap-4 px-5 py-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
+                  <div className="flex items-start gap-3">
+                    <span className="text-amber-400 text-base mt-0.5">💡</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-300 mb-1">Your estimated rate range</p>
+                      <p className="text-sm text-amber-200/70">
+                        {CATEGORY_LABELS[quizAnswers.category] || quizAnswers.category} podcasts with 10k+ listeners typically earn
+                      </p>
+                      <p className="text-sm font-bold text-amber-300 mt-1">
+                        ${CPM_RATES[quizAnswers.category].cpmLow}–${CPM_RATES[quizAnswers.category].cpmHigh} CPM
+                        {' · '}
+                        ${CPM_RATES[quizAnswers.category].epLow.toLocaleString()}–${CPM_RATES[quizAnswers.category].epHigh.toLocaleString()} per episode
+                      </p>
+                      <p className="text-xs text-amber-200/50 mt-1">Use these as your opening position when negotiating.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowRateBanner(false)}
+                    aria-label="Dismiss rate banner"
+                    className="text-amber-500/60 hover:text-amber-400 transition-colors flex-shrink-0 mt-0.5"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             )}

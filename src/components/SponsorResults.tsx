@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { QuizAnswers, PodcastInfo, EmailContext } from '@/types';
 import { ContactMatch } from '@/lib/contact-matching';
@@ -14,6 +15,48 @@ const STORAGE_AUTH_KEY = 'wildcast_authenticated';
 
 type SortField = 'matchScore' | 'company' | 'contact';
 type SortDir = 'asc' | 'desc';
+
+// Helpers
+function toggleSet<T>(prev: Set<T>, item: T): Set<T> {
+  const next = new Set(prev);
+  if (next.has(item)) next.delete(item); else next.add(item);
+  return next;
+}
+
+const ROLE_DEFS = [
+  { label: 'Sponsorship', keywords: ['sponsorship', 'partnership', 'partnerships'] },
+  { label: 'Marketing',   keywords: ['marketing', 'advertising', 'media buy', 'brand'] },
+  { label: 'Executive',   keywords: ['vp ', 'vice president', 'director', 'chief', 'svp ', 'evp ', 'cmo', 'ceo', 'president'] },
+];
+
+// Maps each comma-split industry tag to the first matching group
+const INDUSTRY_GROUPS = [
+  {
+    key: 'streaming',
+    label: 'Streaming & Media',
+    match: ['television', 'radio station', 'streaming', 'broadcast', 'programming content', 'programming transmission', 'movies:', 'music: record', 'sports news'],
+  },
+  {
+    key: 'tech',
+    label: 'Technology',
+    match: ['software', 'internet', 'computer', 'consumer electronics', 'technology', 'digital business', 'social media', 'telecom', 'cellular', 'cloud', 'crm', 'cms', 'seo', 'ipaas', 'mobile app', 'saas', 'semiconductor', 'network', 'electronics', 'search engine'],
+  },
+  {
+    key: 'marketing',
+    label: 'Marketing & Ads',
+    match: ['marketing', 'advertising', 'influencer', 'affiliate', 'search & social', 'native/content', 'video advertising', 'public relations', 'graphic design', 'pr and'],
+  },
+  {
+    key: 'finance',
+    label: 'Finance & Business',
+    match: ['banking', 'financial', 'insurance', 'accounting', 'consulting', 'law firm', 'real estate', 'brokerage', 'credit card', 'mortgage', 'investment', 'service business'],
+  },
+  {
+    key: 'consumer',
+    label: 'Consumer & Lifestyle',
+    match: ['cosmetic', 'perfume', 'toiletri', 'personal care', 'apparel', 'clothing', 'shoe', 'retail', 'restaurant', 'food', 'beverage', 'packaged', 'vitamin', 'supplement', 'pharmaceutical', 'health', 'wellness', 'fitness', 'pet', 'jewelry', 'handbag', 'fashion', 'beauty', 'sports team', 'sports & rec', 'travel', 'entertainment', 'sports'],
+  },
+] as const;
 
 interface SponsorResultsProps {
   matches: ContactMatch[];
@@ -109,6 +152,13 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
   const [sortField, setSortField] = useState<SortField>('matchScore');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  // Filter state
+  const [filterPodcastSponsor, setFilterPodcastSponsor] = useState(false);
+  const [activeIndustries, setActiveIndustries] = useState<Set<string>>(new Set());
+  const [activeRoles, setActiveRoles] = useState<Set<string>>(new Set());
+  const [filterUnlockedOnly, setFilterUnlockedOnly] = useState(false);
+  const [filterShortlistedOnly, setFilterShortlistedOnly] = useState(false);
+
   // Initialize sentEmails from outreachHistory
   useEffect(() => {
     const storedCount = localStorage.getItem(STORAGE_KEY);
@@ -130,6 +180,82 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
     return map;
   }, [outreachHistory]);
 
+  const followUpCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    outreachHistory.forEach(o => map.set(o.sponsor_id, (map.get(o.sponsor_id) || 0) + 1));
+    return map;
+  }, [outreachHistory]);
+
+  const [isFollowUp, setIsFollowUp] = useState(false);
+
+  const needsFollowUp = useCallback((contactId: string): boolean => {
+    const firstDate = outreachMap.get(contactId);
+    const count = followUpCountMap.get(contactId) ?? 0;
+    if (!firstDate || count !== 1) return false;
+    return (Date.now() - new Date(firstDate).getTime()) / 86400000 >= 5;
+  }, [outreachMap, followUpCountMap]);
+
+  // Split every contact's industries by comma → bucket into INDUSTRY_GROUPS
+  const industryGroups = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of localMatches) {
+      const parts = (c.industries || '').split(',').map(s => s.trim()).filter(s => s.length > 1);
+      for (const p of parts) counts.set(p, (counts.get(p) || 0) + 1);
+    }
+    // Assign each tag to the first matching group
+    const buckets = new Map<string, { name: string; count: number }[]>(
+      INDUSTRY_GROUPS.map(g => [g.key, []])
+    );
+    for (const [name, count] of counts.entries()) {
+      const lower = name.toLowerCase();
+      for (const group of INDUSTRY_GROUPS) {
+        if ((group.match as readonly string[]).some(kw => lower.includes(kw))) {
+          buckets.get(group.key)!.push({ name, count });
+          break;
+        }
+      }
+    }
+    return INDUSTRY_GROUPS.map(g => ({
+      key: g.key,
+      label: g.label,
+      values: (buckets.get(g.key) || []).sort((a, b) => b.count - a.count).slice(0, 12),
+    })).filter(g => g.values.length > 0);
+  }, [localMatches]);
+
+  // Role categories that actually exist in the loaded matches
+  const availableRoles = useMemo(() =>
+    ROLE_DEFS.filter(({ keywords }) =>
+      localMatches.some(c => keywords.some(kw => c.title.toLowerCase().includes(kw)))
+    ),
+  [localMatches]);
+
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownAnchor, setDropdownAnchor] = useState<{ top: number; left: number } | null>(null);
+  const ddBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const openDd = useCallback((key: string) => {
+    if (openDropdown === key) { setOpenDropdown(null); setDropdownAnchor(null); return; }
+    const btn = ddBtnRefs.current.get(key);
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      setDropdownAnchor({ top: r.bottom + 6, left: r.left });
+    }
+    setOpenDropdown(key);
+  }, [openDropdown]);
+  const closeDd = useCallback(() => { setOpenDropdown(null); setDropdownAnchor(null); }, []);
+
+  const statusCount = [filterPodcastSponsor, filterUnlockedOnly, filterShortlistedOnly].filter(Boolean).length;
+  const activeFilterCount = [activeIndustries.size > 0, activeRoles.size > 0, statusCount > 0].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setFilterPodcastSponsor(false);
+    setActiveIndustries(new Set());
+    setActiveRoles(new Set());
+    setFilterUnlockedOnly(false);
+    setFilterShortlistedOnly(false);
+    setSearchQuery('');
+    setOpenDropdown(null);
+  };
+
   const displayMatches = useMemo(() => {
     let filtered = [...localMatches];
 
@@ -138,11 +264,50 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (c) =>
-          c.company.toLowerCase().includes(q) ||
+          (c.company || '').toLowerCase().includes(q) ||
           `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-          c.industries.toLowerCase().includes(q)
+          (c.industries || '').toLowerCase().includes(q)
       );
     }
+
+    // Always exclude executives unless explicitly selected in Role filter
+    if (!activeRoles.has('Executive')) {
+      const execKeywords = ROLE_DEFS.find(r => r.label === 'Executive')?.keywords || [];
+      filtered = filtered.filter(c => {
+        const t = c.title.toLowerCase();
+        return !execKeywords.some(kw => t.includes(kw));
+      });
+    }
+
+    // Podcast sponsor filter
+    if (filterPodcastSponsor) {
+      filtered = filtered.filter(c => (c.tags || '').toLowerCase().includes('podcast spend'));
+    }
+
+    // Industry filter — split contact industries by comma, match any selected tag
+    if (activeIndustries.size > 0) {
+      filtered = filtered.filter(c => {
+        const parts = (c.industries || '').split(',').map(s => s.trim().toLowerCase());
+        return Array.from(activeIndustries).some(ind => parts.includes(ind.toLowerCase()));
+      });
+    }
+
+    // Role filter (keyword match against title)
+    if (activeRoles.size > 0) {
+      const roleKeywordsMap: Record<string, string[]> = Object.fromEntries(
+        ROLE_DEFS.map(r => [r.label, r.keywords])
+      );
+      filtered = filtered.filter(c => {
+        const t = c.title.toLowerCase();
+        return Array.from(activeRoles).some(roleLabel =>
+          (roleKeywordsMap[roleLabel] || []).some(kw => t.includes(kw))
+        );
+      });
+    }
+
+    // Unlocked / shortlisted filters
+    if (filterUnlockedOnly) filtered = filtered.filter(c => c.isUnlocked);
+    if (filterShortlistedOnly) filtered = filtered.filter(c => c.isShortlisted);
 
     // Sort
     filtered.sort((a, b) => {
@@ -150,7 +315,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
       if (sortField === 'matchScore') {
         cmp = a.matchScore - b.matchScore;
       } else if (sortField === 'company') {
-        cmp = a.company.localeCompare(b.company);
+        cmp = (a.company || '').localeCompare(b.company || '');
       } else {
         cmp = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
       }
@@ -158,19 +323,20 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
     });
 
     return filtered;
-  }, [localMatches, searchQuery, sortField, sortDir, isLimited, isLocked]);
+  }, [localMatches, searchQuery, sortField, sortDir, isLimited, isLocked, filterPodcastSponsor, activeIndustries, activeRoles, filterUnlockedOnly, filterShortlistedOnly]);
 
   const contactedCount = sentEmails.size;
   const totalCount = localMatches.length;
   const allContacted = totalCount > 0 && contactedCount >= totalCount;
   const progressPct = totalCount > 0 ? (contactedCount / totalCount) * 100 : 0;
 
-  const handleEmailClick = (contact: ContactMatch, e: React.MouseEvent) => {
+  const handleEmailClick = (contact: ContactMatch, e: React.MouseEvent, followUp = false) => {
     e.stopPropagation();
     if (isLocked) {
       setShowUnlockModal(true);
       return;
     }
+    setIsFollowUp(followUp);
     setSelectedContact(contact);
     setShowModal(true);
   };
@@ -319,32 +485,46 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
 
     const isSent = sentEmails.has(contact.id);
     const sentDate = outreachMap.get(contact.id);
+    const followUpReady = isSent && needsFollowUp(contact.id);
+    const alreadyFollowedUp = (followUpCountMap.get(contact.id) ?? 0) >= 2;
     return (
       <div className="flex flex-col items-end">
-        <button
-          onClick={(e) => handleEmailClick(contact, e)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-            isSent
-              ? 'bg-[var(--success)]/20 text-[var(--success)]'
-              : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)]'
-          }`}
-        >
-          {isSent ? (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Contacted
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Email
-            </>
-          )}
-        </button>
+        {followUpReady ? (
+          <button
+            onClick={(e) => handleEmailClick(contact, e, true)}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Follow Up
+          </button>
+        ) : (
+          <button
+            onClick={(e) => handleEmailClick(contact, e)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              isSent
+                ? 'bg-[var(--success)]/20 text-[var(--success)]'
+                : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)]'
+            }`}
+          >
+            {isSent ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {alreadyFollowedUp ? 'Followed Up' : 'Contacted'}
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email
+              </>
+            )}
+          </button>
+        )}
         {isSent && sentDate && !compact && (
           <span className="text-xs text-gray-400 mt-1">{formatDate(sentDate)}</span>
         )}
@@ -667,32 +847,237 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
         {/* Search & Filter (hidden when locked) */}
         {!isLocked && (
           <div className="mb-6 animate-slide-in">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            <div className="relative bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-lg shadow-black/20">
+              {/* Accent line at top */}
+              <div className="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
+
+              {/* Search row */}
+              <div className="px-4 pt-4 pb-3 flex items-center gap-3">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {isLimited && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)]">
+                      PRO
+                    </span>
+                  )}
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    disabled={isLimited}
+                    placeholder={isLimited ? 'Search contacts \u2014 Pro feature' : 'Search by company, name, or industry\u2026'}
+                    className={`w-full pl-10 py-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-sm placeholder-gray-500 focus:outline-none focus:border-[var(--primary)]/50 transition-colors ${isLimited ? 'cursor-not-allowed opacity-60 pr-16' : 'pr-4'}`}
+                  />
+                </div>
                 {isLimited && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--primary)]/20 text-[var(--primary)]">
-                    PRO
-                  </span>
+                  <a href="/subscribe" className="text-sm text-[var(--primary)] hover:underline whitespace-nowrap">
+                    Upgrade to Pro
+                  </a>
                 )}
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={isLimited}
-                  placeholder={isLimited ? 'Search contacts \u2014 Pro feature' : 'Search by company, name, or industry...'}
-                  className={`w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] text-sm placeholder-gray-500 focus:outline-none focus:border-[var(--primary)] transition-colors ${
-                    isLimited ? 'cursor-not-allowed opacity-60' : ''
-                  } ${isLimited ? 'pr-16' : ''}`}
-                />
               </div>
-              {isLimited && (
-                <a href="/subscribe" className="text-sm text-[var(--primary)] hover:underline whitespace-nowrap">
-                  Upgrade to Pro
-                </a>
-              )}
+
+              {/* Divider */}
+              <div className="mx-4 h-px bg-[var(--border)]" />
+
+              {/* Filter row */}
+              <div className="px-4 py-3 flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-gray-500 select-none">Filters</span>
+
+                {/* ── Industry group dropdowns (one per group) ── */}
+                {industryGroups.map(group => {
+                  const groupCount = group.values.filter(v => activeIndustries.has(v.name)).length;
+                  return (
+                    <div key={group.key} className="relative">
+                      <button
+                        ref={(el) => { if (el) ddBtnRefs.current.set(group.key, el); else ddBtnRefs.current.delete(group.key); }}
+                        onClick={() => openDd(group.key)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          groupCount > 0
+                            ? 'bg-[var(--primary)]/10 border-[var(--primary)]/40 text-[var(--primary)]'
+                            : 'bg-[var(--background)] border-[var(--border)] text-gray-400 hover:text-gray-200 hover:border-[var(--border)]/80'
+                        }`}
+                      >
+                        {group.label}
+                        {groupCount > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-white text-[9px] font-bold flex items-center justify-center">
+                            {groupCount}
+                          </span>
+                        )}
+                        <svg className={`w-3 h-3 opacity-60 transition-transform duration-200 ${openDropdown === group.key ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {openDropdown === group.key && dropdownAnchor && createPortal(
+                        <>
+                          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={closeDd} />
+                          <div style={{ position: 'fixed', top: dropdownAnchor.top, left: dropdownAnchor.left, zIndex: 9999, backgroundColor: '#18181b' }} className="border border-[var(--border)] rounded-xl shadow-2xl shadow-black/50 p-1.5 min-w-[220px] max-h-72 overflow-y-auto">
+                            {group.values.map(({ name }) => (
+                              <button
+                                key={name}
+                                onClick={() => setActiveIndustries(prev => toggleSet(prev, name))}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left hover:bg-[var(--card-hover)] transition-colors"
+                              >
+                                <div className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${activeIndustries.has(name) ? 'bg-[var(--primary)] border-[var(--primary)]' : 'border-gray-600'}`}>
+                                  {activeIndustries.has(name) && (
+                                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className={`truncate ${activeIndustries.has(name) ? 'text-white' : 'text-gray-300'}`}>{name.charAt(0).toUpperCase() + name.slice(1)}</span>
+                              </button>
+                            ))}
+                            {groupCount > 0 && (
+                              <button
+                                onClick={() => setActiveIndustries(prev => {
+                                  const next = new Set(prev);
+                                  group.values.forEach(v => next.delete(v.name));
+                                  return next;
+                                })}
+                                className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-1.5 mt-0.5 border-t border-[var(--border)] transition-colors"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                        </>,
+                        document.body
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* ── Role dropdown ── */}
+                <div className="relative">
+                  <button
+                    ref={(el) => { if (el) ddBtnRefs.current.set('role', el); else ddBtnRefs.current.delete('role'); }}
+                    onClick={() => openDd('role')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      activeRoles.size > 0
+                        ? 'bg-[var(--primary)]/10 border-[var(--primary)]/40 text-[var(--primary)]'
+                        : 'bg-[var(--background)] border-[var(--border)] text-gray-400 hover:text-gray-200 hover:border-[var(--border)]/80'
+                    }`}
+                  >
+                    Role
+                    {activeRoles.size > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-white text-[9px] font-bold flex items-center justify-center">
+                        {activeRoles.size}
+                      </span>
+                    )}
+                    <svg className={`w-3 h-3 opacity-60 transition-transform duration-200 ${openDropdown === 'role' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {openDropdown === 'role' && dropdownAnchor && createPortal(
+                    <>
+                      <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={closeDd} />
+                      <div style={{ position: 'fixed', top: dropdownAnchor.top, left: dropdownAnchor.left, zIndex: 9999, backgroundColor: '#18181b' }} className="border border-[var(--border)] rounded-xl shadow-2xl shadow-black/50 p-1.5 min-w-[180px]">
+                        {availableRoles.map(role => (
+                          <button
+                            key={role.label}
+                            onClick={() => setActiveRoles(prev => toggleSet(prev, role.label))}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left hover:bg-[var(--card-hover)] transition-colors"
+                          >
+                            <div className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${activeRoles.has(role.label) ? 'bg-[var(--primary)] border-[var(--primary)]' : 'border-gray-600'}`}>
+                              {activeRoles.has(role.label) && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className={activeRoles.has(role.label) ? 'text-white' : 'text-gray-300'}>{role.label}</span>
+                          </button>
+                        ))}
+                        {activeRoles.size > 0 && (
+                          <button onClick={() => setActiveRoles(new Set())} className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-1.5 mt-0.5 border-t border-[var(--border)] transition-colors">
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+
+                {/* ── Status dropdown ── */}
+                <div className="relative">
+                  <button
+                    ref={(el) => { if (el) ddBtnRefs.current.set('status', el); else ddBtnRefs.current.delete('status'); }}
+                    onClick={() => openDd('status')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      statusCount > 0
+                        ? 'bg-[var(--primary)]/10 border-[var(--primary)]/40 text-[var(--primary)]'
+                        : 'bg-[var(--background)] border-[var(--border)] text-gray-400 hover:text-gray-200 hover:border-[var(--border)]/80'
+                    }`}
+                  >
+                    Status
+                    {statusCount > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-[var(--primary)] text-white text-[9px] font-bold flex items-center justify-center">
+                        {statusCount}
+                      </span>
+                    )}
+                    <svg className={`w-3 h-3 opacity-60 transition-transform duration-200 ${openDropdown === 'status' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {openDropdown === 'status' && dropdownAnchor && createPortal(
+                    <>
+                      <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={closeDd} />
+                      <div style={{ position: 'fixed', top: dropdownAnchor.top, left: dropdownAnchor.left, zIndex: 9999, backgroundColor: '#18181b' }} className="border border-[var(--border)] rounded-xl shadow-2xl shadow-black/50 p-1.5 min-w-[190px]">
+                        {([
+                          { label: 'Podcast Sponsor', active: filterPodcastSponsor, toggle: () => setFilterPodcastSponsor(v => !v) },
+                          { label: 'Unlocked', active: filterUnlockedOnly, toggle: () => setFilterUnlockedOnly(v => !v) },
+                          { label: 'Shortlisted', active: filterShortlistedOnly, toggle: () => setFilterShortlistedOnly(v => !v) },
+                        ] as const).map(({ label, active, toggle }) => (
+                          <button
+                            key={label}
+                            onClick={toggle}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left hover:bg-[var(--card-hover)] transition-colors"
+                          >
+                            <div className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${active ? 'bg-[var(--primary)] border-[var(--primary)]' : 'border-gray-600'}`}>
+                              {active && (
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className={active ? 'text-white' : 'text-gray-300'}>{label}</span>
+                          </button>
+                        ))}
+                        {statusCount > 0 && (
+                          <button
+                            onClick={() => { setFilterPodcastSponsor(false); setFilterUnlockedOnly(false); setFilterShortlistedOnly(false); }}
+                            className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-1.5 mt-0.5 border-t border-[var(--border)] transition-colors"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+
+                {/* Clear all + result count — right-aligned */}
+                {activeFilterCount > 0 && (
+                  <div className="flex items-center gap-3 ml-auto">
+                    <span className="text-xs text-gray-500">
+                      {displayMatches.length} of {localMatches.length} results
+                    </span>
+                    <button
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -996,11 +1381,12 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
       {!isLocked && selectedContact && selectedContact.isUnlocked && podcastInfo && (
         <OutreachModal
           isOpen={showModal}
-          onClose={() => setShowModal(false)}
+          onClose={() => { setShowModal(false); setIsFollowUp(false); }}
           sponsor={contactToSponsor(selectedContact)}
           quizAnswers={quizAnswers}
           podcastInfo={podcastInfo}
           onSend={handleEmailSent}
+          isFollowUp={isFollowUp}
         />
       )}
 

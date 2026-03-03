@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { Quiz } from '@/components/Quiz';
@@ -21,6 +21,25 @@ export default function SurveyPage() {
   const [growthPlan, setGrowthPlan] = useState<GrowthPlanType | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
+  const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
+
+  const LOADING_MESSAGES = [
+    'Analyzing your podcast...',
+    'Scanning 1,000+ active sponsors...',
+    'Ranking your best fits with AI...',
+    'Almost ready...',
+  ];
+
+  useEffect(() => {
+    if (step !== 'loading') return;
+    setLoadingMsgIndex(0);
+    const interval = setInterval(() => {
+      setLoadingMsgIndex(prev => Math.min(prev + 1, LOADING_MESSAGES.length - 1));
+    }, 1300);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   const handleQuizComplete = async (answers: QuizAnswers) => {
     setQuizAnswers(answers);
 
@@ -30,7 +49,9 @@ export default function SurveyPage() {
       return;
     }
 
-    // Fetch contacts immediately with just quiz answers
+    setStep('loading');
+
+    // Fetch contacts with AI scoring (takes 2–5s)
     try {
       const res = await fetch('/api/contacts', {
         method: 'POST',
@@ -205,6 +226,46 @@ export default function SurveyPage() {
       <main className="pt-20">
         {step === 'quiz' && (
           <Quiz onComplete={handleQuizComplete} />
+        )}
+
+        {step === 'loading' && (
+          <div className="min-h-screen flex items-center justify-center p-6">
+            <div className="w-full max-w-md text-center">
+              {/* Pulsing icon */}
+              <div className="relative w-20 h-20 mx-auto mb-8">
+                <div className="absolute inset-0 rounded-full bg-[var(--primary)]/20 animate-ping" />
+                <div className="relative w-20 h-20 rounded-full bg-[var(--primary)]/10 border border-[var(--primary)]/30 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Rotating status message */}
+              <h2 className="text-2xl font-semibold mb-3 transition-all duration-500">
+                {LOADING_MESSAGES[loadingMsgIndex]}
+              </h2>
+
+              <p className="text-gray-400 text-sm mb-8">
+                Using AI to find sponsors who actually buy podcast ads
+              </p>
+
+              {/* Progress bar */}
+              <div className="h-1.5 bg-[var(--card)] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[var(--primary)] rounded-full transition-all ease-linear"
+                  style={{
+                    width: `${((loadingMsgIndex + 1) / LOADING_MESSAGES.length) * 100}%`,
+                    transitionDuration: '1.2s',
+                  }}
+                />
+              </div>
+
+              <p className="text-xs text-gray-600 mt-4">
+                Step {loadingMsgIndex + 1} of {LOADING_MESSAGES.length}
+              </p>
+            </div>
+          </div>
         )}
 
         {step === 'results' && (

@@ -56,6 +56,7 @@ interface OutreachModalProps {
   podcastInfo: PodcastInfo;
   onSend: () => void;
   onTokenConsumed?: () => void;
+  isFollowUp?: boolean;
 }
 
 export function OutreachModal({
@@ -66,6 +67,7 @@ export function OutreachModal({
   podcastInfo,
   onSend,
   onTokenConsumed,
+  isFollowUp = false,
 }: OutreachModalProps) {
   const { data: session } = useSession();
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
@@ -173,7 +175,9 @@ export function OutreachModal({
   };
 
   const handleSend = async () => {
-    const emailSubject = getEmailSubject(sponsor, podcastInfo);
+    const emailSubject = isFollowUp
+      ? `Following up: ${podcastInfo.podcastName} × ${sponsor.brandName} Sponsorship`
+      : getEmailSubject(sponsor, podcastInfo);
     setIsSending(true);
     setSendError(null);
 
@@ -235,6 +239,15 @@ export function OutreachModal({
                 to send outreach emails directly from your account.
               </p>
             </div>
+          </div>
+        )}
+
+        {isFollowUp && (
+          <div className="px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3">
+            <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-amber-300">Sending as a follow-up to your earlier outreach — subject has been updated automatically.</p>
           </div>
         )}
 

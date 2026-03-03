@@ -11,6 +11,7 @@ export interface ContactMatch {
   phone: string | null;
   description: string;
   industries: string;
+  disciplines: string;
   linkedin: string | null;
   website: string;
   tags: string;
@@ -30,12 +31,17 @@ export interface DbContact {
   phone: string;
   description: string;
   industries: string;
+  disciplines: string;
   linkedin: string;
   website: string;
   tags: string;
   region: string;
   city: string;
   state: string;
+  country: string;
+  company_brands: string;
+  email_status: string;
+  employees: string;
 }
 
 // Map quiz categories to industry/description keywords
@@ -71,7 +77,7 @@ export async function matchContacts(quizAnswers: QuizAnswers): Promise<ContactMa
   const listKeywords = [...new Set(listenerTypes.flatMap(t => listenerKeywords[t] || []))];
 
   const scored: ContactMatch[] = contacts.map((c: DbContact) => {
-    const searchText = `${c.description} ${c.industries} ${c.title}`.toLowerCase();
+    const searchText = `${c.description} ${c.industries} ${c.disciplines} ${c.company_brands} ${c.title}`.toLowerCase();
     const tagsLower = (c.tags || '').toLowerCase();
     let score = 0;
     const reasons: string[] = [];
@@ -144,14 +150,15 @@ export async function matchContacts(quizAnswers: QuizAnswers): Promise<ContactMa
 
     return {
       id: c.id,
-      firstName: c.first_name,
-      lastName: c.last_name,
-      title: c.title,
-      company: c.company,
-      email: c.email,
-      phone: c.phone,
-      description: c.description,
-      industries: c.industries,
+      firstName: c.first_name || '',
+      lastName: c.last_name || '',
+      title: c.title || '',
+      company: c.company || '',
+      email: c.email || null,
+      phone: c.phone || null,
+      description: c.description || '',
+      industries: c.industries || '',
+      disciplines: c.disciplines || '',
       linkedin: c.linkedin || '',
       website: c.website || '',
       tags: c.tags || '',

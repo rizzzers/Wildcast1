@@ -88,7 +88,7 @@ function buildContactLines(contacts: DbContact[]): string {
   return contacts
     .map(
       (c) =>
-        `${c.id}|${c.title}|${c.company}|${(c.description || '').slice(0, 120)}|${c.industries || ''}|${c.tags || ''}`,
+        `${c.id}|${c.title}|${c.company}|${(c.description || '').slice(0, 120)}|${c.industries || ''}|${c.disciplines || ''}|${c.tags || ''}`,
     )
     .join('\n');
 }

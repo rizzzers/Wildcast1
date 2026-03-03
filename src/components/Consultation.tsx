@@ -8,7 +8,7 @@ interface ConsultationProps {
 }
 
 export function Consultation({ quizAnswers }: ConsultationProps) {
-  const calendlyUrl = 'https://calendly.com/ryanestes/discovery-meeting-clone';
+  const calendlyUrl = 'https://calendly.com/ryanestes/howdi-discovery';
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -146,7 +146,7 @@ export function Consultation({ quizAnswers }: ConsultationProps) {
           <div className="mt-10 flex items-center justify-center gap-3">
             <div className="h-px w-8 bg-[var(--primary)]/40" />
             <span className="text-sm text-gray-500 tracking-wide">
-              The Wildcast Philosophy
+              The Howdi Philosophy
             </span>
             <div className="h-px w-8 bg-[var(--primary)]/40" />
           </div>

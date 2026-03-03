@@ -10,7 +10,8 @@ import { ContactMatch } from '@/lib/contact-matching';
 export default function SponsorsPage() {
   const { data: session, status } = useSession();
   const [matches, setMatches] = useState<ContactMatch[]>([]);
-  const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
+  const [hasSurvey, setHasSurvey] = useState(false);
   const [podcastInfo, setPodcastInfo] = useState<PodcastInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [totalMatches, setTotalMatches] = useState(0);
@@ -68,7 +69,7 @@ export default function SponsorsPage() {
     fetch('/api/user/profile')
       .then((res) => res.json() as Promise<Record<string, any>>)
       .then(async (data) => {
-        if (data.error || !data.submission) {
+        if (data.error) {
           setLoading(false);
           return;
         }
@@ -77,28 +78,40 @@ export default function SponsorsPage() {
           setOutreachHistory(data.outreach);
         }
 
-        const s = data.submission;
-        const answers: QuizAnswers = {
-          category: s.category || undefined,
-          audienceSize: s.audience_size || undefined,
-          listenerType: s.listener_type?.includes(',') ? s.listener_type.split(',') : (s.listener_type || undefined),
-          tone: s.tone || undefined,
-          releaseFrequency: s.release_frequency || undefined,
-          format: s.format || undefined,
-          primaryGoal: s.primary_goal || undefined,
+        let answers: QuizAnswers = {};
+        let podcast: PodcastInfo = {
+          email: data.user?.email || '',
+          podcastName: '',
+          podcastUrl: '',
+          description: '',
+          hasMediaKit: false,
         };
-        setQuizAnswers(answers);
 
-        const podcast: PodcastInfo = {
-          email: s.email || data.user?.email || '',
-          podcastName: s.podcast_name || '',
-          podcastUrl: s.podcast_url || '',
-          description: s.description || '',
-          hasMediaKit: !!s.has_media_kit,
-        };
+        if (data.submission) {
+          setHasSurvey(true);
+          const s = data.submission;
+          answers = {
+            category: s.category || undefined,
+            audienceSize: s.audience_size || undefined,
+            listenerType: s.listener_type?.includes(',') ? s.listener_type.split(',') : (s.listener_type || undefined),
+            tone: s.tone || undefined,
+            releaseFrequency: s.release_frequency || undefined,
+            format: s.format || undefined,
+            primaryGoal: s.primary_goal || undefined,
+          };
+          podcast = {
+            email: s.email || data.user?.email || '',
+            podcastName: s.podcast_name || '',
+            podcastUrl: s.podcast_url || '',
+            description: s.description || '',
+            hasMediaKit: !!s.has_media_kit,
+          };
+        }
+
+        setQuizAnswers(answers);
         setPodcastInfo(podcast);
 
-        // Fetch matches using user's actual quiz answers
+        // Fetch matches (uses survey data if available, otherwise shows all contacts)
         const matchData = await fetchMatches(answers, podcast);
         if (matchData && !matchData.error) {
           setMatches(matchData.matches);
@@ -156,20 +169,70 @@ export default function SponsorsPage() {
           <div className="pt-24 text-center text-gray-400">
             Please sign in to see your partner matches.
           </div>
-        ) : !quizAnswers ? (
-          <div className="pt-24 text-center">
-            <p className="text-gray-400 mb-4">
-              Complete the survey first so we can match you with the right partners.
+        ) : quizAnswers.audienceSize === 'under-10k' ? (
+          /* Under-10k callout — full-width, no matches shown */
+          <div className="max-w-3xl mx-auto px-6 py-16 text-center">
+            {/* Eyebrow */}
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-widest uppercase border border-[var(--primary)]/30 bg-[var(--primary)]/[0.06] text-[var(--primary)] mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] animate-pulse" />
+              Free · 15 minutes · Zero strings
+            </span>
+
+            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.05] mb-6">
+              Sponsors don&apos;t need convincing
+              <br />
+              <span className="text-gray-400 font-light">when your podcast is positioned right.</span>
+            </h2>
+
+            <p className="text-lg text-gray-400 leading-relaxed mb-10 max-w-xl mx-auto">
+              In one free call, we&apos;ll map out exactly how to grow past 10K downloads and
+              build a show sponsors are already waiting in line for — before you ever send a cold email.
             </p>
+
+            {/* Stats row */}
+            <div className="flex items-center justify-center gap-10 mb-12 text-center">
+              <div>
+                <div className="text-3xl font-bold text-[var(--primary)]">100+</div>
+                <div className="text-xs text-gray-500 mt-1">Podcasters helped</div>
+              </div>
+              <div className="h-8 w-px bg-[var(--border)]" />
+              <div>
+                <div className="text-3xl font-bold">3–6<span className="text-xl text-gray-500"> mo</span></div>
+                <div className="text-xs text-gray-500 mt-1">To hit 10K+</div>
+              </div>
+              <div className="h-8 w-px bg-[var(--border)]" />
+              <div>
+                <div className="text-3xl font-bold text-[var(--primary)]">$0</div>
+                <div className="text-xs text-gray-500 mt-1">Completely free</div>
+              </div>
+            </div>
+
+            {/* CTA */}
             <a
-              href="/survey"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] rounded-xl font-medium transition-colors"
+              href="https://calendly.com/ryanestes/howdi-discovery"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-3 px-10 py-5 bg-white text-black font-semibold rounded-full hover:bg-gray-100 transition-all duration-300 text-base shadow-[0_0_0_0_rgba(139,92,246,0)] hover:shadow-[0_0_40px_rgba(139,92,246,0.2)]"
             >
-              Take the Survey
+              Book Your Free Discovery Call
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="transition-transform duration-300 group-hover:translate-x-1">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </a>
+
+            <p className="mt-5 text-sm text-gray-600">
+              We map out your growth path — sponsors come later, naturally.
+            </p>
           </div>
         ) : (
           <>
+            {!hasSurvey && (
+              <div className="max-w-4xl mx-auto px-6 mb-4">
+                <div className="flex items-center justify-between gap-4 px-5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-gray-400">
+                  <span>Showing all partners — <a href="/survey" className="text-[var(--primary)] hover:underline">complete a quick survey</a> to get personalized matches ranked for your podcast.</span>
+                </div>
+              </div>
+            )}
             <SponsorResults
               matches={matches}
               quizAnswers={quizAnswers}

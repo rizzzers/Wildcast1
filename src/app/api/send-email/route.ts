@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import crypto from 'crypto';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getDb } from '@/lib/db';
 
@@ -12,7 +13,10 @@ interface GmailTokenRow {
 
 async function getValidAccessToken(userId: string): Promise<{ accessToken: string; gmailAddress: string | null } | null> {
   const db = getDb();
-  const row = db.prepare('SELECT access_token, refresh_token, expires_at, gmail_address FROM gmail_tokens WHERE user_id = ?').get(userId) as GmailTokenRow | undefined;
+  const row = await db
+    .prepare('SELECT access_token, refresh_token, expires_at, gmail_address FROM gmail_tokens WHERE user_id = ?')
+    .bind(userId)
+    .first<GmailTokenRow>();
 
   if (!row) return null;
 
@@ -39,16 +43,17 @@ async function getValidAccessToken(userId: string): Promise<{ accessToken: strin
     }),
   });
 
-  const refreshed = await tokenRes.json();
+  const refreshed = await tokenRes.json() as { access_token?: string; expires_in?: number };
   if (!tokenRes.ok || !refreshed.access_token) return null;
 
   const newExpiresAt = refreshed.expires_in
     ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
     : null;
 
-  db.prepare(`
-    UPDATE gmail_tokens SET access_token = ?, expires_at = ?, updated_at = datetime('now') WHERE user_id = ?
-  `).run(refreshed.access_token, newExpiresAt, userId);
+  await db
+    .prepare(`UPDATE gmail_tokens SET access_token = ?, expires_at = ?, updated_at = datetime('now') WHERE user_id = ?`)
+    .bind(refreshed.access_token, newExpiresAt, userId)
+    .run();
 
   return { accessToken: refreshed.access_token, gmailAddress: row.gmail_address };
 }
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest) {
     contactName,
     contactRole,
     templateUsed,
-  } = await request.json();
+  } = await request.json() as { to: string; subject: string; body: string; sponsorId: string; brandName: string; contactName: string; contactRole?: string; templateUsed?: string };
 
   if (!to || !subject || !body) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -122,22 +127,25 @@ export async function POST(request: NextRequest) {
   // Track in outreach_history
   try {
     const db = getDb();
-    db.prepare(`
-      INSERT INTO outreach_history
-        (id, user_id, sponsor_id, brand_name, contact_name, contact_email, contact_role, template_used, email_subject, email_content)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      crypto.randomUUID(),
-      session.user.id,
-      sponsorId,
-      brandName,
-      contactName,
-      to,
-      contactRole ?? null,
-      templateUsed ?? null,
-      subject,
-      body,
-    );
+    await db
+      .prepare(`
+        INSERT INTO outreach_history
+          (id, user_id, sponsor_id, brand_name, contact_name, contact_email, contact_role, template_used, email_subject, email_content)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        crypto.randomUUID(),
+        session.user.id,
+        sponsorId,
+        brandName,
+        contactName,
+        to,
+        contactRole ?? null,
+        templateUsed ?? null,
+        subject,
+        body,
+      )
+      .run();
   } catch (dbError) {
     console.error('Failed to track outreach:', dbError);
   }

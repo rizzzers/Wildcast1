@@ -4,35 +4,41 @@ import { getDb } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
     const {
       category, audienceSize, listenerType, tone,
       releaseFrequency, format, primaryGoal,
       email, podcastName, podcastUrl, description, hasMediaKit,
-    } = body;
+    } = await req.json() as {
+      category?: string; audienceSize?: string; listenerType?: string | string[];
+      tone?: string; releaseFrequency?: string; format?: string; primaryGoal?: string;
+      email?: string; podcastName?: string; podcastUrl?: string; description?: string; hasMediaKit?: boolean;
+    };
 
     const db = getDb();
     const id = crypto.randomUUID();
 
-    db.prepare(`
-      INSERT INTO survey_submissions
-        (id, category, audience_size, listener_type, tone, release_frequency, format, primary_goal, email, podcast_name, podcast_url, description, has_media_kit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      category || null,
-      audienceSize || null,
-      Array.isArray(listenerType) ? listenerType.join(',') : (listenerType || null),
-      tone || null,
-      releaseFrequency || null,
-      format || null,
-      primaryGoal || null,
-      email || null,
-      podcastName || null,
-      podcastUrl || null,
-      description || null,
-      hasMediaKit ? 1 : 0,
-    );
+    await db
+      .prepare(`
+        INSERT INTO survey_submissions
+          (id, category, audience_size, listener_type, tone, release_frequency, format, primary_goal, email, podcast_name, podcast_url, description, has_media_kit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        id,
+        category || null,
+        audienceSize || null,
+        Array.isArray(listenerType) ? listenerType.join(',') : (listenerType || null),
+        tone || null,
+        releaseFrequency || null,
+        format || null,
+        primaryGoal || null,
+        email || null,
+        podcastName || null,
+        podcastUrl || null,
+        description || null,
+        hasMediaKit ? 1 : 0,
+      )
+      .run();
 
     return NextResponse.json({ id });
   } catch (error) {
@@ -51,7 +57,10 @@ export async function GET(req: NextRequest) {
     }
 
     const db = getDb();
-    const submission = db.prepare('SELECT * FROM survey_submissions WHERE id = ?').get(id);
+    const submission = await db
+      .prepare('SELECT * FROM survey_submissions WHERE id = ?')
+      .bind(id)
+      .first();
 
     if (!submission) {
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });

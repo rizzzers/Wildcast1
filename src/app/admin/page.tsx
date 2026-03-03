@@ -136,7 +136,7 @@ function AdminPageContent() {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/stats');
-      const data = await res.json();
+      const data = await res.json() as Stats;
       setStats(data);
     } catch (e) {
       console.error('Failed to fetch stats:', e);
@@ -147,7 +147,7 @@ function AdminPageContent() {
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/admin/users');
-      const data = await res.json();
+      const data = await res.json() as UserRow[];
       setUsers(data);
     } catch (e) {
       console.error('Failed to fetch users:', e);
@@ -157,7 +157,7 @@ function AdminPageContent() {
   const fetchSubmissions = async () => {
     try {
       const res = await fetch('/api/admin/submissions');
-      const data = await res.json();
+      const data = await res.json() as Submission[];
       setSubmissions(data);
     } catch (e) {
       console.error('Failed to fetch submissions:', e);
@@ -167,7 +167,7 @@ function AdminPageContent() {
   const fetchContacts = async () => {
     try {
       const res = await fetch('/api/admin/contacts');
-      const data = await res.json();
+      const data = await res.json() as AdminContact[];
       setAllContacts(data);
     } catch (e) {
       console.error('Failed to fetch contacts:', e);
@@ -201,7 +201,7 @@ function AdminPageContent() {
   const fetchOutreach = async () => {
     try {
       const res = await fetch('/api/admin/outreach');
-      const data = await res.json();
+      const data = await res.json() as { contactTallies: ContactTally[]; outreachDetails: OutreachDetail[] };
       setContactTallies(data.contactTallies || []);
       setOutreachDetails(data.outreachDetails || []);
     } catch (e) {

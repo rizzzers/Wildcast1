@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getDb } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       }),
     });
 
-    const tokens = await tokenRes.json();
+    const tokens = await tokenRes.json() as { access_token?: string; refresh_token?: string; expires_in?: number; ok?: boolean };
 
     if (!tokenRes.ok || !tokens.access_token) {
       console.error('Token exchange failed:', tokens);
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
-    const userInfo = await userInfoRes.json();
+    const userInfo = await userInfoRes.json() as { email?: string };
     const gmailAddress = userInfo.email ?? null;
 
     const expiresAt = tokens.expires_in
@@ -52,19 +53,28 @@ export async function GET(request: NextRequest) {
       : null;
 
     const db = getDb();
-    const existing = db.prepare('SELECT id FROM gmail_tokens WHERE user_id = ?').get(userId);
+    const existing = await db
+      .prepare('SELECT id FROM gmail_tokens WHERE user_id = ?')
+      .bind(userId)
+      .first();
 
     if (existing) {
-      db.prepare(`
-        UPDATE gmail_tokens
-        SET access_token = ?, refresh_token = COALESCE(?, refresh_token), expires_at = ?, gmail_address = ?, updated_at = datetime('now')
-        WHERE user_id = ?
-      `).run(tokens.access_token, tokens.refresh_token ?? null, expiresAt, gmailAddress, userId);
+      await db
+        .prepare(`
+          UPDATE gmail_tokens
+          SET access_token = ?, refresh_token = COALESCE(?, refresh_token), expires_at = ?, gmail_address = ?, updated_at = datetime('now')
+          WHERE user_id = ?
+        `)
+        .bind(tokens.access_token, tokens.refresh_token ?? null, expiresAt, gmailAddress, userId)
+        .run();
     } else {
-      db.prepare(`
-        INSERT INTO gmail_tokens (id, user_id, access_token, refresh_token, expires_at, gmail_address)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(crypto.randomUUID(), userId, tokens.access_token, tokens.refresh_token ?? null, expiresAt, gmailAddress);
+      await db
+        .prepare(`
+          INSERT INTO gmail_tokens (id, user_id, access_token, refresh_token, expires_at, gmail_address)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `)
+        .bind(crypto.randomUUID(), userId, tokens.access_token, tokens.refresh_token ?? null, expiresAt, gmailAddress)
+        .run();
     }
 
     profileUrl.searchParams.set('gmail_connected', '1');

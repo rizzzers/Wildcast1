@@ -10,7 +10,10 @@ export async function GET() {
   }
 
   const db = getDb();
-  const row = db.prepare('SELECT gmail_address FROM gmail_tokens WHERE user_id = ?').get(session.user.id) as { gmail_address: string | null } | undefined;
+  const row = await db
+    .prepare('SELECT gmail_address FROM gmail_tokens WHERE user_id = ?')
+    .bind(session.user.id)
+    .first<{ gmail_address: string | null }>();
 
   return NextResponse.json({
     connected: !!row,

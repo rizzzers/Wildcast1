@@ -16,7 +16,7 @@ export function DashboardShell({ children, activeTab = 'overview' }: DashboardSh
 
   useEffect(() => {
     fetch('/api/gmail/status')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ connected: boolean }>)
       .then((d) => setGmailConnected(d.connected))
       .catch(() => {});
   }, []);

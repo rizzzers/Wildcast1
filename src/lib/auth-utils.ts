@@ -10,32 +10,41 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export function createUser(email: string, name: string, passwordHash: string) {
+export async function createUser(email: string, name: string, passwordHash: string) {
   const db = getDb();
   const id = crypto.randomUUID();
   const role = email === process.env.ADMIN_EMAIL ? 'admin' : 'user';
 
-  const stmt = db.prepare(
-    'INSERT INTO users (id, email, name, password_hash, role) VALUES (?, ?, ?, ?, ?)'
-  );
-  stmt.run(id, email, name, passwordHash, role);
+  await db
+    .prepare('INSERT INTO users (id, email, name, password_hash, role) VALUES (?, ?, ?, ?, ?)')
+    .bind(id, email, name, passwordHash, role)
+    .run();
 
   return { id, email, name, role };
 }
 
-export function getUserByEmail(email: string) {
+export async function getUserByEmail(email: string) {
   const db = getDb();
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email) as DbUser | undefined;
+  return db
+    .prepare('SELECT * FROM users WHERE email = ?')
+    .bind(email)
+    .first() as Promise<DbUser | null>;
 }
 
-export function getUserById(id: string) {
+export async function getUserById(id: string) {
   const db = getDb();
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as DbUser | undefined;
+  return db
+    .prepare('SELECT * FROM users WHERE id = ?')
+    .bind(id)
+    .first() as Promise<DbUser | null>;
 }
 
-export function linkSubmissionToUser(submissionId: string, userId: string) {
+export async function linkSubmissionToUser(submissionId: string, userId: string) {
   const db = getDb();
-  db.prepare('UPDATE survey_submissions SET user_id = ? WHERE id = ?').run(userId, submissionId);
+  await db
+    .prepare('UPDATE survey_submissions SET user_id = ? WHERE id = ?')
+    .bind(userId, submissionId)
+    .run();
 }
 
 interface DbUser {
@@ -46,6 +55,7 @@ interface DbUser {
   google_id: string | null;
   image: string | null;
   role: string;
+  plan: string;
   created_at: string;
   updated_at: string;
 }

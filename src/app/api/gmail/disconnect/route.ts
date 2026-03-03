@@ -10,14 +10,20 @@ export async function POST() {
   }
 
   const db = getDb();
-  const row = db.prepare('SELECT access_token FROM gmail_tokens WHERE user_id = ?').get(session.user.id) as { access_token: string } | undefined;
+  const row = await db
+    .prepare('SELECT access_token FROM gmail_tokens WHERE user_id = ?')
+    .bind(session.user.id)
+    .first<{ access_token: string }>();
 
   if (row?.access_token) {
     // Best-effort token revocation
     fetch(`https://oauth2.googleapis.com/revoke?token=${row.access_token}`, { method: 'POST' }).catch(() => {});
   }
 
-  db.prepare('DELETE FROM gmail_tokens WHERE user_id = ?').run(session.user.id);
+  await db
+    .prepare('DELETE FROM gmail_tokens WHERE user_id = ?')
+    .bind(session.user.id)
+    .run();
 
   return NextResponse.json({ success: true });
 }

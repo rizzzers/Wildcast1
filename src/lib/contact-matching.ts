@@ -18,7 +18,7 @@ export interface ContactMatch {
   matchReasons: string[];
 }
 
-interface DbContact {
+export interface DbContact {
   id: string;
   first_name: string;
   last_name: string;
@@ -58,9 +58,9 @@ const listenerKeywords: Record<string, string[]> = {
   'hobbyists-diy': ['home goods', 'hardware', 'craft', 'garden', 'outdoor', 'retailer', 'tool', 'consumer', 'hobby', 'maker'],
 };
 
-export function matchContacts(quizAnswers: QuizAnswers): ContactMatch[] {
+export async function matchContacts(quizAnswers: QuizAnswers): Promise<ContactMatch[]> {
   const db = getDb();
-  const contacts = db.prepare('SELECT * FROM contacts').all() as DbContact[];
+  const { results: contacts } = await db.prepare('SELECT * FROM contacts').all<DbContact>();
 
   const catKeywords = categoryKeywords[quizAnswers.category || ''] || [];
   const listenerTypes = Array.isArray(quizAnswers.listenerType)
@@ -68,7 +68,7 @@ export function matchContacts(quizAnswers: QuizAnswers): ContactMatch[] {
     : quizAnswers.listenerType ? [quizAnswers.listenerType] : [];
   const listKeywords = [...new Set(listenerTypes.flatMap(t => listenerKeywords[t] || []))];
 
-  const scored: ContactMatch[] = contacts.map((c) => {
+  const scored: ContactMatch[] = contacts.map((c: DbContact) => {
     const searchText = `${c.description} ${c.industries} ${c.title}`.toLowerCase();
     const tagsLower = (c.tags || '').toLowerCase();
     let score = 0;

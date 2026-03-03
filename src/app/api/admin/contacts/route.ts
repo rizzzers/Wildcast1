@@ -12,7 +12,7 @@ export async function GET() {
 
     const db = getDb();
 
-    const contacts = db.prepare(`
+    const { results: contacts } = await db.prepare(`
       SELECT
         c.*,
         u.name as assigned_user_name,
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { contactId, assignedUserId } = await req.json();
+    const { contactId, assignedUserId } = await req.json() as { contactId: string; assignedUserId?: string };
 
     if (!contactId) {
       return NextResponse.json({ error: 'Missing contactId' }, { status: 400 });
@@ -45,8 +45,10 @@ export async function PATCH(req: NextRequest) {
     const db = getDb();
 
     // Allow null to unassign
-    db.prepare('UPDATE contacts SET assigned_user_id = ? WHERE id = ?')
-      .run(assignedUserId || null, contactId);
+    await db
+      .prepare('UPDATE contacts SET assigned_user_id = ? WHERE id = ?')
+      .bind(assignedUserId || null, contactId)
+      .run();
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -13,7 +13,7 @@ export async function GET() {
     const db = getDb();
 
     // Per-contact tally: how many emails sent to each contact
-    const contactTallies = db.prepare(`
+    const { results: contactTallies } = await db.prepare(`
       SELECT
         contact_email,
         contact_name,
@@ -27,7 +27,7 @@ export async function GET() {
     `).all();
 
     // All outreach records with user info
-    const outreachDetails = db.prepare(`
+    const { results: outreachDetails } = await db.prepare(`
       SELECT
         o.id,
         o.contact_email,

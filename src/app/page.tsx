@@ -598,7 +598,7 @@ export default function Home() {
                 src="/images/videodeck-co-FD8ac8iw0sc-unsplash.jpg"
                 alt="Podcast host smiling with headphones and microphone"
                 fill
-                className="object-cover hover:scale-105 transition-transform duration-700"
+                className="object-cover object-top hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--background)]/80 to-transparent" />
             </div>

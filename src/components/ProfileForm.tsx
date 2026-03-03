@@ -87,7 +87,7 @@ export function ProfileForm({ data }: ProfileFormProps) {
 
   useEffect(() => {
     fetch('/api/gmail/status')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ connected: boolean; email?: string | null }>)
       .then((d) => {
         setGmailConnected(d.connected);
         setGmailEmail(d.email ?? null);

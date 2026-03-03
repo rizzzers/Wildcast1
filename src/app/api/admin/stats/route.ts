@@ -12,12 +12,26 @@ export async function GET() {
 
     const db = getDb();
 
-    const totalUsers = (db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number }).count;
-    const totalSubmissions = (db.prepare('SELECT COUNT(*) as count FROM survey_submissions').get() as { count: number }).count;
-    const linkedSubmissions = (db.prepare('SELECT COUNT(*) as count FROM survey_submissions WHERE user_id IS NOT NULL').get() as { count: number }).count;
-    const recentSubmissions = db.prepare(
-      'SELECT s.*, u.name as user_name, u.email as user_email FROM survey_submissions s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC LIMIT 10'
-    ).all();
+    const totalUsersRow = await db
+      .prepare('SELECT COUNT(*) as count FROM users')
+      .first<{ count: number }>();
+    const totalUsers = totalUsersRow?.count ?? 0;
+
+    const totalSubmissionsRow = await db
+      .prepare('SELECT COUNT(*) as count FROM survey_submissions')
+      .first<{ count: number }>();
+    const totalSubmissions = totalSubmissionsRow?.count ?? 0;
+
+    const linkedSubmissionsRow = await db
+      .prepare('SELECT COUNT(*) as count FROM survey_submissions WHERE user_id IS NOT NULL')
+      .first<{ count: number }>();
+    const linkedSubmissions = linkedSubmissionsRow?.count ?? 0;
+
+    const { results: recentSubmissions } = await db
+      .prepare(
+        'SELECT s.*, u.name as user_name, u.email as user_email FROM survey_submissions s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC LIMIT 10'
+      )
+      .all();
 
     return NextResponse.json({
       totalUsers,

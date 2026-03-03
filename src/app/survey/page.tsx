@@ -37,7 +37,7 @@ export default function SurveyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quizAnswers: answers }),
       });
-      const data = await res.json();
+      const data = await res.json() as Record<string, any>;
       setContactMatches(data.matches || data);
     } catch (error) {
       console.error('Failed to fetch contact matches:', error);
@@ -63,7 +63,7 @@ export default function SurveyPage() {
           hasMediaKit: info.hasMediaKit,
         }),
       });
-      const data = await res.json();
+      const data = await res.json() as Record<string, any>;
       if (data.id) {
         sessionStorage.setItem('wildcast_submission_id', data.id);
         localStorage.setItem('wildcast_submission_id', data.id);
@@ -136,7 +136,7 @@ export default function SurveyPage() {
           emailContext: context,
         }),
       });
-      const data = await res.json();
+      const data = await res.json() as Record<string, any>;
       setContactMatches(data.matches || data);
     } catch (error) {
       console.error('Failed to re-fetch contact matches:', error);

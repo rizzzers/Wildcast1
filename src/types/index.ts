@@ -84,7 +84,7 @@ export interface GrowthPlan {
   distributionStrategies: string[];
 }
 
-export type AppStep = 'landing' | 'quiz' | 'email-gate' | 'profile-context' | 'results' | 'growth-plan' | 'consultation';
+export type AppStep = 'landing' | 'quiz' | 'email-gate' | 'create-account' | 'profile-context' | 'results' | 'growth-plan' | 'consultation';
 
 export interface User {
   id: string;

@@ -52,7 +52,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         body: JSON.stringify({ email, password, name, submissionId }),
       });
 
-      const data = await res.json();
+      const data = await res.json() as Record<string, any>;
 
       if (!res.ok) {
         setError(data.error || 'Failed to create account');

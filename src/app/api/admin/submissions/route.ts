@@ -11,9 +11,11 @@ export async function GET() {
     }
 
     const db = getDb();
-    const submissions = db.prepare(
-      'SELECT s.*, u.name as user_name, u.email as user_email FROM survey_submissions s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC'
-    ).all();
+    const { results: submissions } = await db
+      .prepare(
+        'SELECT s.*, u.name as user_name, u.email as user_email FROM survey_submissions s LEFT JOIN users u ON s.user_id = u.id ORDER BY s.created_at DESC'
+      )
+      .all();
 
     return NextResponse.json(submissions);
   } catch (error) {

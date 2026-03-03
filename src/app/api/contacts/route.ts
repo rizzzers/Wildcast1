@@ -16,7 +16,7 @@ const FREE_LIMIT = 13;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json() as { quizAnswers?: QuizAnswers; podcastInfo?: PodcastInfo; emailContext?: EmailContext } & QuizAnswers;
 
     // Backward compat: body can be plain QuizAnswers or { quizAnswers, podcastInfo, emailContext }
     let quizAnswers: QuizAnswers;
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Always run keyword matching first (instant)
-    const matches = matchContacts(quizAnswers);
+    const matches = await matchContacts(quizAnswers);
 
     // Check user plan to determine limit
     const session = await getServerSession(authOptions);
@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
     if (session?.user?.id) {
       userId = session.user.id;
       const db = getDb();
-      const user = db.prepare('SELECT plan, role FROM users WHERE id = ?').get(userId) as { plan: string; role: string } | undefined;
+      const user = await db
+        .prepare('SELECT plan, role FROM users WHERE id = ?')
+        .bind(userId)
+        .first<{ plan: string; role: string }>();
       if (user) {
         plan = user.plan;
         role = user.role;
@@ -58,13 +61,17 @@ export async function POST(req: NextRequest) {
       let emailContext: EmailContext | undefined = bodyEmailContext;
       if (!emailContext) {
         const db = getDb();
-        emailContext = db.prepare(
-          'SELECT unique_value_prop, past_sponsors, audience_demographics, notable_guests, additional_notes FROM email_context WHERE user_id = ?'
-        ).get(userId) as EmailContext | undefined;
+        const row = await db
+          .prepare(
+            'SELECT unique_value_prop, past_sponsors, audience_demographics, notable_guests, additional_notes FROM email_context WHERE user_id = ?'
+          )
+          .bind(userId)
+          .first<EmailContext>();
+        emailContext = row ?? undefined;
       }
 
       const hash = computeSubmissionHash(quizAnswers, podcastInfo, emailContext);
-      const cached = getCachedAIScores(userId, hash);
+      const cached = await getCachedAIScores(userId, hash);
 
       if (cached) {
         // Merge AI scores into keyword results
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
       } else {
         // Fire-and-forget: trigger AI scoring in the background
         const db = getDb();
-        const contacts = db.prepare('SELECT * FROM contacts').all() as DbContact[];
+        const { results: contacts } = await db.prepare('SELECT * FROM contacts').all<DbContact>();
         triggerAIScoring(userId, quizAnswers, contacts, podcastInfo, emailContext);
         scoringMethod = 'ai-pending';
       }

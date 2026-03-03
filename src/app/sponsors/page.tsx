@@ -27,7 +27,7 @@ export default function SponsorsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quizAnswers: answers, podcastInfo: podcast }),
       });
-      return res.json();
+      return res.json() as Promise<Record<string, any>>;
     },
     [],
   );
@@ -40,7 +40,7 @@ export default function SponsorsPage() {
     }
 
     fetch('/api/user/profile')
-      .then((res) => res.json())
+      .then((res) => res.json() as Promise<Record<string, any>>)
       .then(async (data) => {
         if (data.error || !data.submission) {
           setLoading(false);

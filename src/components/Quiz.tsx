@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { QuizAnswers } from '@/types';
-import { quizQuestions } from '@/data/quiz-options';
+import { quizQuestions, coreQuizQuestionIds } from '@/data/quiz-options';
+
+const coreQuestions = quizQuestions.filter((q) => (coreQuizQuestionIds as readonly string[]).includes(q.id));
 
 interface QuizProps {
   onComplete: (answers: QuizAnswers) => void;
@@ -13,12 +15,12 @@ export function Quiz({ onComplete }: QuizProps) {
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [multiSelections, setMultiSelections] = useState<string[]>([]);
 
-  const currentQuestion = quizQuestions[currentStep];
-  const progress = ((currentStep + 1) / quizQuestions.length) * 100;
+  const currentQuestion = coreQuestions[currentStep];
+  const progress = ((currentStep + 1) / coreQuestions.length) * 100;
   const isMultiSelect = currentQuestion.multiSelect === true;
 
   const advanceOrComplete = (newAnswers: QuizAnswers) => {
-    if (currentStep < quizQuestions.length - 1) {
+    if (currentStep < coreQuestions.length - 1) {
       setTimeout(() => {
         setCurrentStep(currentStep + 1);
         setMultiSelections([]);
@@ -67,7 +69,7 @@ export function Quiz({ onComplete }: QuizProps) {
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
-            <span>Question {currentStep + 1} of {quizQuestions.length}</span>
+            <span>Question {currentStep + 1} of {coreQuestions.length}</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="h-2 bg-[var(--card)] rounded-full overflow-hidden">

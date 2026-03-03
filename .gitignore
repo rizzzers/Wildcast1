@@ -42,3 +42,9 @@ next-env.d.ts
 
 # database
 wildcast.db
+wildcast.db-shm
+wildcast.db-wal
+
+# cloudflare
+.open-next
+.dev.vars

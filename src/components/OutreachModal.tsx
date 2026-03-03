@@ -80,7 +80,7 @@ export function OutreachModal({
   useEffect(() => {
     if (session?.user?.id && !emailContext) {
       fetch('/api/user/profile')
-        .then((res) => res.json())
+        .then((res) => res.json() as Promise<Record<string, any>>)
         .then((data) => {
           if (data.emailContext) setEmailContext(data.emailContext);
         })
@@ -115,7 +115,7 @@ export function OutreachModal({
       setSendError(null);
 
       fetch('/api/gmail/status')
-        .then((r) => r.json())
+        .then((r) => r.json() as Promise<{ connected: boolean }>)
         .then((d) => setGmailConnected(d.connected))
         .catch(() => setGmailConnected(false));
     }
@@ -192,7 +192,7 @@ export function OutreachModal({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json() as Record<string, any>;
         setSendError(data.error || 'Failed to send email. Please try again.');
         return;
       }

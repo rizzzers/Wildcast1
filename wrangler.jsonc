@@ -27,5 +27,9 @@
       "database_id": "71c41729-3a27-4dca-befb-7744d1c01070"
     }
   ],
-  "workers_dev": false
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "gethowdi.com/*", "zone_name": "gethowdi.com" },
+    { "pattern": "www.gethowdi.com/*", "zone_name": "gethowdi.com" }
+  ]
 }

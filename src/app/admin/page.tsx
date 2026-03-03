@@ -19,6 +19,7 @@ interface UserRow {
   email: string;
   name: string;
   role: string;
+  plan: string;
   created_at: string;
 }
 
@@ -198,6 +199,19 @@ function AdminPageContent() {
     }
   };
 
+  const handleSetPlan = async (userId: string, plan: string) => {
+    try {
+      await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, plan }),
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan } : u));
+    } catch (e) {
+      console.error('Failed to update plan:', e);
+    }
+  };
+
   const fetchOutreach = async () => {
     try {
       const res = await fetch('/api/admin/outreach');
@@ -299,6 +313,7 @@ function AdminPageContent() {
                         <th className="text-left p-4 font-semibold text-sm">Name</th>
                         <th className="text-left p-4 font-semibold text-sm">Email</th>
                         <th className="text-left p-4 font-semibold text-sm">Role</th>
+                        <th className="text-left p-4 font-semibold text-sm">Plan</th>
                         <th className="text-left p-4 font-semibold text-sm">Joined</th>
                       </tr>
                     </thead>
@@ -316,12 +331,24 @@ function AdminPageContent() {
                               {u.role}
                             </span>
                           </td>
+                          <td className="p-4 text-sm">
+                            <button
+                              onClick={() => handleSetPlan(u.id, u.plan === 'pro' ? 'free' : 'pro')}
+                              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                u.plan === 'pro'
+                                  ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                  : 'bg-[var(--card-hover)] text-gray-400 hover:bg-[var(--primary)]/20 hover:text-[var(--primary)]'
+                              }`}
+                            >
+                              {u.plan === 'pro' ? 'Pro' : 'Free'} {u.role !== 'admin' && '↕'}
+                            </button>
+                          </td>
                           <td className="p-4 text-sm text-gray-400">{new Date(u.created_at).toLocaleDateString()}</td>
                         </tr>
                       ))}
                       {users.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="p-8 text-center text-gray-500">No users yet</td>
+                          <td colSpan={5} className="p-8 text-center text-gray-500">No users yet</td>
                         </tr>
                       )}
                     </tbody>

@@ -7,15 +7,17 @@ export interface ContactMatch {
   lastName: string;
   title: string;
   company: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   description: string;
   industries: string;
-  linkedin: string;
+  linkedin: string | null;
   website: string;
   tags: string;
   matchScore: number;
   matchReasons: string[];
+  isUnlocked: boolean;
+  isShortlisted: boolean;
 }
 
 export interface DbContact {
@@ -155,6 +157,8 @@ export async function matchContacts(quizAnswers: QuizAnswers): Promise<ContactMa
       tags: c.tags || '',
       matchScore: score,
       matchReasons: reasons.length > 0 ? reasons : ['General advertising contact'],
+      isUnlocked: false,
+      isShortlisted: false,
     };
   });
 

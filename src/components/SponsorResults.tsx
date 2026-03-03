@@ -7,6 +7,7 @@ import { ContactMatch } from '@/lib/contact-matching';
 import { OutreachModal } from './OutreachModal';
 import { AuthModal } from './AuthModal';
 import { UnlockModal } from './UnlockModal';
+import { LockedField } from './LockedField';
 
 const STORAGE_KEY = 'wildcast_email_count';
 const STORAGE_AUTH_KEY = 'wildcast_authenticated';
@@ -23,9 +24,12 @@ interface SponsorResultsProps {
   isLocked?: boolean;
   onUnlock?: (info: PodcastInfo, accountInfo?: { name: string; password: string }) => void;
   onProfileContextSubmit?: (context: EmailContext) => void;
+  tokensRemaining?: number;
+  onContactUnlocked?: (contactId: string) => void;
+  tokenRefreshKey?: number;
 }
 
-export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, outreachHistory, isLocked = false, onUnlock, onProfileContextSubmit }: SponsorResultsProps) {
+export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, outreachHistory, isLocked = false, onUnlock, onProfileContextSubmit, tokensRemaining = 0, onContactUnlocked }: SponsorResultsProps) {
   const router = useRouter();
   const [selectedContact, setSelectedContact] = useState<ContactMatch | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -34,6 +38,58 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
   const [sentEmails, setSentEmails] = useState<Set<string>>(new Set());
   const [emailCount, setEmailCount] = useState(0);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [localMatches, setLocalMatches] = useState<ContactMatch[]>(matches);
+  const [unlockingId, setUnlockingId] = useState<string | null>(null);
+  const [shortlistingId, setShortlistingId] = useState<string | null>(null);
+
+  // Sync localMatches when matches prop changes
+  useEffect(() => {
+    setLocalMatches(matches);
+  }, [matches]);
+
+  const handleUnlock = async (contactId: string) => {
+    setUnlockingId(contactId);
+    try {
+      const res = await fetch('/api/contacts/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId }),
+      });
+      const data = await res.json() as { contact?: { email: string | null; phone: string | null; linkedin: string | null }; tokensRemaining?: number; error?: string };
+      if (res.ok && data.contact) {
+        setLocalMatches(prev => prev.map(m =>
+          m.id === contactId
+            ? { ...m, email: data.contact!.email, phone: data.contact!.phone, linkedin: data.contact!.linkedin, isUnlocked: true }
+            : m
+        ));
+        onContactUnlocked?.(contactId);
+      }
+    } catch {
+      // ignore
+    }
+    setUnlockingId(null);
+  };
+
+  const handleShortlist = async (contactId: string, isShortlisted: boolean) => {
+    setShortlistingId(contactId);
+    // Optimistic update
+    setLocalMatches(prev => prev.map(m =>
+      m.id === contactId ? { ...m, isShortlisted: !isShortlisted } : m
+    ));
+    try {
+      await fetch('/api/shortlist', {
+        method: isShortlisted ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactId }),
+      });
+    } catch {
+      // Revert on error
+      setLocalMatches(prev => prev.map(m =>
+        m.id === contactId ? { ...m, isShortlisted: isShortlisted } : m
+      ));
+    }
+    setShortlistingId(null);
+  };
 
   // Profile context banner state
   const [showProfileBanner, setShowProfileBanner] = useState(false);
@@ -75,7 +131,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
   }, [outreachHistory]);
 
   const displayMatches = useMemo(() => {
-    let filtered = [...matches];
+    let filtered = [...localMatches];
 
     // Search filter (only for Pro users — !isLimited)
     if (!isLimited && !isLocked && searchQuery.trim()) {
@@ -102,10 +158,10 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
     });
 
     return filtered;
-  }, [matches, searchQuery, sortField, sortDir, isLimited, isLocked]);
+  }, [localMatches, searchQuery, sortField, sortDir, isLimited, isLocked]);
 
   const contactedCount = sentEmails.size;
-  const totalCount = matches.length;
+  const totalCount = localMatches.length;
   const allContacted = totalCount > 0 && contactedCount >= totalCount;
   const progressPct = totalCount > 0 ? (contactedCount / totalCount) * 100 : 0;
 
@@ -213,6 +269,23 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
     matchReasons: c.matchReasons,
   });
 
+  const renderShortlistButton = (contact: ContactMatch) => {
+    const isShortlisted = contact.isShortlisted;
+    const isLoading = shortlistingId === contact.id;
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); handleShortlist(contact.id, isShortlisted); }}
+        disabled={isLoading}
+        title={isShortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+        className="p-1.5 rounded-lg text-gray-400 hover:text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-colors disabled:opacity-40"
+      >
+        <svg className="w-4 h-4" fill={isShortlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" style={isShortlisted ? { color: 'var(--primary)' } : {}}>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-4.5L5 21V5z" />
+        </svg>
+      </button>
+    );
+  };
+
   const renderEmailButton = (contact: ContactMatch, compact = false) => {
     if (isLocked) {
       return (
@@ -224,6 +297,22 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
           Unlock
+        </button>
+      );
+    }
+
+    // Contact-level locked: show lock icon, no email button
+    if (!contact.isUnlocked) {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleUnlock(contact.id); }}
+          disabled={unlockingId === contact.id || tokensRemaining === 0}
+          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 bg-[var(--card)] border border-[var(--border)] text-gray-400 hover:border-[var(--primary)]/50 disabled:opacity-40"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          {unlockingId === contact.id ? 'Unlocking...' : tokensRemaining === 0 ? 'No tokens' : 'Unlock (1 token)'}
         </button>
       );
     }
@@ -296,12 +385,23 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
             )}
           </div>
           <div>
-            {contact.phone && (
-              <div className="mb-3">
-                <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Phone</div>
-                <p className="text-sm text-gray-300">{contact.phone}</p>
-              </div>
-            )}
+            <div className="mb-3">
+              <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Phone</div>
+              {contact.isUnlocked ? (
+                contact.phone ? (
+                  <p className="text-sm text-gray-300">{contact.phone}</p>
+                ) : (
+                  <p className="text-sm text-gray-500">Not available</p>
+                )
+              ) : (
+                <LockedField
+                  onUnlock={() => handleUnlock(contact.id)}
+                  isUnlocking={unlockingId === contact.id}
+                  tokensRemaining={tokensRemaining}
+                  label="Phone"
+                />
+              )}
+            </div>
             {contact.website && (
               <div className="mb-3">
                 <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Website</div>
@@ -316,20 +416,31 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                 </a>
               </div>
             )}
-            {contact.linkedin && (
-              <div className="mb-3">
-                <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">LinkedIn</div>
-                <a
-                  href={contact.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[var(--primary)] hover:underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  View Profile
-                </a>
-              </div>
-            )}
+            <div className="mb-3">
+              <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">LinkedIn</div>
+              {contact.isUnlocked ? (
+                contact.linkedin ? (
+                  <a
+                    href={contact.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[var(--primary)] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View Profile
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-500">Not available</p>
+                )
+              ) : (
+                <LockedField
+                  onUnlock={() => handleUnlock(contact.id)}
+                  isUnlocking={unlockingId === contact.id}
+                  tokensRemaining={tokensRemaining}
+                  label="LinkedIn"
+                />
+              )}
+            </div>
             {sentEmails.has(contact.id) && sentDate && (
               <div className="mt-4 space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--success)]/10 text-[var(--success)] text-sm font-medium">
@@ -381,7 +492,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
             Your Partner Contacts
           </h1>
           <p className="text-gray-400 text-lg">
-            We found {matches.length} contacts that match your podcast
+            We found {localMatches.length} contacts that match your podcast
           </p>
           {isLimited && !isLocked && (
             <a
@@ -406,7 +517,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
             </div>
             <h3 className="text-xl font-bold mb-2">Unlock Contact Details</h3>
             <p className="text-gray-400 mb-4 max-w-md mx-auto">
-              Enter your email and podcast info to reveal names, emails, and LinkedIn profiles for all {matches.length} matches.
+              Enter your email and podcast info to reveal names, emails, and LinkedIn profiles for all {localMatches.length} matches.
             </p>
             <button
               onClick={() => setShowUnlockModal(true)}
@@ -655,23 +766,25 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                         <div className="text-sm text-gray-400 truncate">{contact.title}</div>
                       </td>
                       <td className="p-4 text-center">
-                        {contact.linkedin && (
-                          isLocked ? (
-                            <span className="text-blue-400/50 inline-block blur-sm select-none">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                            </span>
-                          ) : (
-                            <a
-                              href={contact.linkedin}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 inline-block"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                            </a>
-                          )
-                        )}
+                        {isLocked ? (
+                          <span className="text-blue-400/50 inline-block blur-sm select-none">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          </span>
+                        ) : contact.isUnlocked && contact.linkedin ? (
+                          <a
+                            href={contact.linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 inline-block"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          </a>
+                        ) : !contact.isUnlocked ? (
+                          <span className="text-blue-400/30 inline-block blur-sm select-none">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          </span>
+                        ) : null}
                       </td>
                       <td className="p-4 overflow-hidden">
                         <div className="font-medium truncate">{contact.company}</div>
@@ -685,6 +798,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {!isLocked && renderShortlistButton(contact)}
                           {renderEmailButton(contact)}
                           {!isLocked && (
                             <svg
@@ -734,8 +848,11 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                       {contact.firstName} {contact.lastName} &middot; {contact.title}
                     </div>
                   </div>
-                  <div className="flex-shrink-0 ml-3 px-2.5 py-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-sm font-semibold">
-                    {contact.matchScore}%
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                    {!isLocked && renderShortlistButton(contact)}
+                    <div className="px-2.5 py-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-sm font-semibold">
+                      {contact.matchScore}%
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mb-3">
@@ -780,12 +897,23 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                       </ul>
                     </div>
                   )}
-                  {contact.phone && (
-                    <div className="mb-2">
-                      <span className="text-xs text-gray-400">Phone: </span>
-                      <span className="text-sm text-gray-300">{contact.phone}</span>
-                    </div>
-                  )}
+                  <div className="mb-2">
+                    <span className="text-xs text-gray-400">Phone: </span>
+                    {contact.isUnlocked ? (
+                      contact.phone ? (
+                        <span className="text-sm text-gray-300">{contact.phone}</span>
+                      ) : (
+                        <span className="text-sm text-gray-500">Not available</span>
+                      )
+                    ) : (
+                      <LockedField
+                        onUnlock={() => handleUnlock(contact.id)}
+                        isUnlocking={unlockingId === contact.id}
+                        tokensRemaining={tokensRemaining}
+                        label="Phone"
+                      />
+                    )}
+                  </div>
                   {contact.website && (
                     <div className="mb-2">
                       <span className="text-xs text-gray-400">Website: </span>
@@ -799,19 +927,30 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
                       </a>
                     </div>
                   )}
-                  {contact.linkedin && (
-                    <div className="mb-2">
-                      <span className="text-xs text-gray-400">LinkedIn: </span>
-                      <a
-                        href={contact.linkedin}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-[var(--primary)] hover:underline"
-                      >
-                        View Profile
-                      </a>
-                    </div>
-                  )}
+                  <div className="mb-2">
+                    <span className="text-xs text-gray-400">LinkedIn: </span>
+                    {contact.isUnlocked ? (
+                      contact.linkedin ? (
+                        <a
+                          href={contact.linkedin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[var(--primary)] hover:underline"
+                        >
+                          View Profile
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-500">Not available</span>
+                      )
+                    ) : (
+                      <LockedField
+                        onUnlock={() => handleUnlock(contact.id)}
+                        isUnlocking={unlockingId === contact.id}
+                        tokensRemaining={tokensRemaining}
+                        label="LinkedIn"
+                      />
+                    )}
+                  </div>
                   {sentEmails.has(contact.id) && outreachMap.get(contact.id) && (
                     <div className="mt-3 space-y-3">
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--success)]/10 text-[var(--success)] text-sm font-medium">
@@ -853,8 +992,8 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
 
       </div>
 
-      {/* Outreach Modal (only when unlocked) */}
-      {!isLocked && selectedContact && podcastInfo && (
+      {/* Outreach Modal (only when contact is unlocked) */}
+      {!isLocked && selectedContact && selectedContact.isUnlocked && podcastInfo && (
         <OutreachModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

@@ -62,9 +62,9 @@ export interface Sponsor {
   description: string;
   contactName: string;
   role: string;
-  email: string;
-  phone: string;
-  linkedin: string;
+  email: string | null;
+  phone: string | null;
+  linkedin: string | null;
   category: string;
   budgetRange: string;
   audiencePreferences: string[];

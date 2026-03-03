@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { TokenBadge } from './TokenBadge';
 
 type NavItemId = 'overview' | 'outreach' | 'personalize' | 'settings' | 'sponsors'
+  | 'shortlist'
   | 'admin' | 'admin-users' | 'admin-submissions' | 'admin-outreach' | 'admin-contacts';
 
 interface SidebarProps {
@@ -30,6 +32,16 @@ const navItems: { id: NavItemId; label: string; href: string; icon: React.ReactN
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'shortlist' as NavItemId,
+    label: 'Shortlist',
+    href: '/shortlist',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-4.5L5 21V5z" />
       </svg>
     ),
   },
@@ -174,6 +186,7 @@ export function Sidebar({ activeTab, user, gmailConnected }: SidebarProps) {
 
       {/* User info */}
       <div className="p-4 border-t border-[var(--border)] space-y-3">
+        <TokenBadge />
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-[var(--primary)]/20 border border-[var(--primary)]/30 flex items-center justify-center text-sm font-semibold text-[var(--primary)] shrink-0">
             {initial}

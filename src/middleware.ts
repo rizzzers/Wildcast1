@@ -13,6 +13,13 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Protect /shortlist -must be authenticated
+  if (pathname.startsWith('/shortlist')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+  }
+
   // Protect /admin -must be authenticated + admin role
   if (pathname.startsWith('/admin')) {
     if (!token || token.role !== 'admin') {
@@ -24,5 +31,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/profile/:path*', '/admin/:path*'],
+  matcher: ['/profile/:path*', '/admin/:path*', '/shortlist/:path*', '/shortlist'],
 };

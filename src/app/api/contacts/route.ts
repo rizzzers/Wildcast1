@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
       // Use email context from request body if provided, otherwise load from DB
       let emailContext: EmailContext | undefined = bodyEmailContext;
       if (!emailContext) {
-        const db = getDb();
-        const row = await db
+        const dbCtx = getDb();
+        const row = await dbCtx
           .prepare(
             'SELECT unique_value_prop, past_sponsors, audience_demographics, notable_guests, additional_notes FROM email_context WHERE user_id = ?'
           )
@@ -80,11 +80,49 @@ export async function POST(req: NextRequest) {
         scoringMethod = 'ai-cached';
       } else {
         // Fire-and-forget: trigger AI scoring in the background
-        const db = getDb();
-        const { results: contacts } = await db.prepare('SELECT * FROM contacts').all<DbContact>();
+        const dbAi = getDb();
+        const { results: contacts } = await dbAi.prepare('SELECT * FROM contacts').all<DbContact>();
         triggerAIScoring(userId, quizAnswers, contacts, podcastInfo, emailContext);
         scoringMethod = 'ai-pending';
       }
+    }
+
+    // Redact contact details for non-unlocked contacts (server-side)
+    const userRole = role;
+    if (userRole === 'admin') {
+      results = results.map(c => ({ ...c, isUnlocked: true, isShortlisted: false }));
+    } else if (userId && results.length > 0) {
+      const contactIds = results.map(c => c.id);
+      const placeholders = contactIds.map(() => '?').join(',');
+      const dbRedact = getDb();
+
+      const { results: unlockRows } = await dbRedact
+        .prepare(`SELECT contact_id FROM contact_unlocks WHERE user_id = ? AND contact_id IN (${placeholders})`)
+        .bind(userId, ...contactIds)
+        .all<{ contact_id: string }>();
+      const unlockedSet = new Set(unlockRows.map(r => r.contact_id));
+
+      const { results: shortlistRows } = await dbRedact
+        .prepare(`SELECT contact_id FROM shortlist WHERE user_id = ? AND contact_id IN (${placeholders})`)
+        .bind(userId, ...contactIds)
+        .all<{ contact_id: string }>();
+      const shortlistedSet = new Set(shortlistRows.map(r => r.contact_id));
+
+      results = results.map(c => ({
+        ...c,
+        email:         unlockedSet.has(c.id) ? c.email    : null,
+        phone:         unlockedSet.has(c.id) ? c.phone    : null,
+        linkedin:      unlockedSet.has(c.id) ? c.linkedin : null,
+        isUnlocked:    unlockedSet.has(c.id),
+        isShortlisted: shortlistedSet.has(c.id),
+      }));
+    } else {
+      // Unauthenticated: redact all
+      results = results.map(c => ({
+        ...c,
+        email: null, phone: null, linkedin: null,
+        isUnlocked: false, isShortlisted: false,
+      }));
     }
 
     return NextResponse.json({

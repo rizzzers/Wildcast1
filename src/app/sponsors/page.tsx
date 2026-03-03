@@ -19,6 +19,8 @@ export default function SponsorsPage() {
   const [scoringMethod, setScoringMethod] = useState<string>('keyword');
   const [aiEnhancing, setAiEnhancing] = useState(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tokensRemaining, setTokensRemaining] = useState(0);
+  const [tokenRefreshKey, setTokenRefreshKey] = useState(0);
 
   const fetchMatches = useCallback(
     async (answers: QuizAnswers, podcast: PodcastInfo | null) => {
@@ -31,6 +33,30 @@ export default function SponsorsPage() {
     },
     [],
   );
+
+  const fetchTokens = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tokens');
+      if (res.ok) {
+        const data = await res.json() as { tokensRemaining: number };
+        setTokensRemaining(data.tokensRemaining ?? 0);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleContactUnlocked = useCallback(() => {
+    setTokensRemaining(prev => Math.max(0, prev - 1));
+    setTokenRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Fetch token status on auth
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchTokens();
+    }
+  }, [status, fetchTokens]);
 
   // Fetch user's profile data and build quiz/podcast info from it
   useEffect(() => {
@@ -150,6 +176,9 @@ export default function SponsorsPage() {
               podcastInfo={podcastInfo!}
               isLimited={isLimited}
               outreachHistory={outreachHistory}
+              tokensRemaining={tokensRemaining}
+              onContactUnlocked={handleContactUnlocked}
+              tokenRefreshKey={tokenRefreshKey}
             />
 
             {isLimited && totalMatches > matches.length && (

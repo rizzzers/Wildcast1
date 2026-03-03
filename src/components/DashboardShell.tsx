@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar';
 interface DashboardShellProps {
   children: React.ReactNode;
   activeTab?: 'overview' | 'outreach' | 'personalize' | 'settings' | 'sponsors'
+    | 'shortlist'
     | 'admin' | 'admin-users' | 'admin-submissions' | 'admin-outreach' | 'admin-contacts';
 }
 

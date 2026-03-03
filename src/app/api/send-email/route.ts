@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import crypto from 'crypto';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getDb } from '@/lib/db';
+import { checkAndConsumeToken } from '@/lib/tokens';
 
 interface GmailTokenRow {
   access_token: string;
@@ -102,6 +103,24 @@ export async function POST(request: NextRequest) {
   }
 
   const { accessToken, gmailAddress } = tokenData;
+
+  // Consume a send token (admins bypass)
+  const db = getDb();
+  const userForTokens = await db
+    .prepare('SELECT plan, role FROM users WHERE id = ?')
+    .bind(session.user.id)
+    .first<{ plan: string; role: string }>();
+
+  if (!userForTokens) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  if (userForTokens.role !== 'admin') {
+    const { ok } = await checkAndConsumeToken(session.user.id, userForTokens.plan);
+    if (!ok) {
+      return NextResponse.json({ error: 'insufficient_tokens' }, { status: 402 });
+    }
+  }
   const senderName = session.user.name || gmailAddress || 'Wildcast User';
   const fromAddress = gmailAddress ?? session.user.email ?? '';
   const rawEmail = buildRawEmail(to, `${senderName} <${fromAddress}>`, subject, body);

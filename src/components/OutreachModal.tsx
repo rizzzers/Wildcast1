@@ -55,6 +55,7 @@ interface OutreachModalProps {
   quizAnswers: QuizAnswers;
   podcastInfo: PodcastInfo;
   onSend: () => void;
+  onTokenConsumed?: () => void;
 }
 
 export function OutreachModal({
@@ -64,6 +65,7 @@ export function OutreachModal({
   quizAnswers,
   podcastInfo,
   onSend,
+  onTokenConsumed,
 }: OutreachModalProps) {
   const { data: session } = useSession();
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
@@ -180,7 +182,7 @@ export function OutreachModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: sponsor.email,
+          to: sponsor.email ?? '',
           subject: emailSubject,
           body: currentMessage,
           sponsorId: sponsor.id,
@@ -191,12 +193,19 @@ export function OutreachModal({
         }),
       });
 
+      if (res.status === 402) {
+        setSendError("You've used all your tokens today. Tokens reset at midnight UTC.");
+        setIsSending(false);
+        return;
+      }
+
       if (!res.ok) {
         const data = await res.json() as Record<string, any>;
         setSendError(data.error || 'Failed to send email. Please try again.');
         return;
       }
 
+      onTokenConsumed?.();
       onSend();
       onClose();
     } catch {

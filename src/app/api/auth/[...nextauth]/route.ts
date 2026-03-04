@@ -4,6 +4,33 @@ import { getUserByEmail, verifyPassword } from '@/lib/auth-utils';
 import { getDb } from '@/lib/db';
 import crypto from 'crypto';
 
+async function notifyNewUser(name: string, email: string, method: string) {
+  if (!process.env.RESEND_API_KEY) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Howdi <notifications@gethowdi.com>',
+        to: 'ryan@ryanestes.info',
+        subject: `New user signed up — ${name || email}`,
+        html: `
+          <h2>New Howdi User</h2>
+          <p><strong>Name:</strong> ${name || '(not provided)'}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Sign-up method:</strong> ${method}</p>
+          <p><strong>Time:</strong> ${new Date().toUTCString()}</p>
+        `,
+      }),
+    });
+  } catch {
+    // Non-critical — don't block sign-in
+  }
+}
+
 // Custom Google provider that uses fetch for ALL HTTP calls, bypassing openid-client's
 // https.request which is not implemented in Cloudflare Workers (unenv).
 // Both token exchange and userinfo are handled with custom request functions.
@@ -106,6 +133,7 @@ export const authOptions: NextAuthOptions = {
             .bind(newId, user.email!, user.name || '', token.sub, role)
             .run();
           dbUser = { id: newId, email: user.email!, name: user.name || '', role, plan: 'free' };
+          void notifyNewUser(user.name || '', user.email!, 'Google');
         } else {
           // Update google_id on existing account if missing
           await db

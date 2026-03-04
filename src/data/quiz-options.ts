@@ -11,7 +11,7 @@ export interface QuizQuestionDef {
   multiSelect?: boolean;
 }
 
-export const coreQuizQuestionIds = ['category', 'audienceSize', 'listenerType'] as const;
+export const coreQuizQuestionIds = ['category', 'audienceSize', 'listenerType', 'tone', 'releaseFrequency', 'format', 'primaryGoal'] as const;
 
 export const quizQuestions: QuizQuestionDef[] = [
   {

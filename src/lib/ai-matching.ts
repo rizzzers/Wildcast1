@@ -157,7 +157,7 @@ export async function scoreContactsWithAI(
     model: MODEL,
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.3,
-    max_tokens: 8000,
+    max_tokens: 3000,
     response_format: { type: 'json_object' },
   });
 

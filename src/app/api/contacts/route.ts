@@ -14,10 +14,10 @@ import {
 import { DbContact } from '@/lib/contact-matching';
 
 const FREE_LIMIT = 13;
-// Only send top N keyword matches to AI — keeps latency and cost low
-const AI_CANDIDATE_LIMIT = 150;
+// Only send top N keyword matches to AI — keeps latency low (30 contacts ~3-5s)
+const AI_CANDIDATE_LIMIT = 30;
 // Minimum AI score to appear in results — filters out weak matches
-const SCORE_THRESHOLD = 40;
+const SCORE_THRESHOLD = 30;
 // OpenAI model used for scoring (must match what's cached)
 const AI_MODEL = 'gpt-4o-mini';
 
@@ -64,44 +64,49 @@ export async function POST(req: NextRequest) {
 
     // AI scoring: run for all users (authenticated or anonymous) when API key is set
     if (process.env.OPENAI_API_KEY && matches.length > 0) {
-      // Load email context for authenticated users
-      let emailContext: EmailContext | undefined = bodyEmailContext;
-      if (!emailContext && userId) {
-        const dbCtx = getDb();
-        const row = await dbCtx
-          .prepare(
-            'SELECT unique_value_prop, past_sponsors, audience_demographics, notable_guests, additional_notes FROM email_context WHERE user_id = ?'
-          )
-          .bind(userId)
-          .first<EmailContext>();
-        emailContext = row ?? undefined;
-      }
+      try {
+        // Load email context for authenticated users
+        let emailContext: EmailContext | undefined = bodyEmailContext;
+        if (!emailContext && userId) {
+          const dbCtx = getDb();
+          const row = await dbCtx
+            .prepare(
+              'SELECT unique_value_prop, past_sponsors, audience_demographics, notable_guests, additional_notes FROM email_context WHERE user_id = ?'
+            )
+            .bind(userId)
+            .first<EmailContext>();
+          emailContext = row ?? undefined;
+        }
 
-      // Anonymous users share a cache keyed by 'anon' + quiz hash
-      const cacheUserId = userId ?? 'anon';
-      const hash = computeSubmissionHash(quizAnswers, podcastInfo, emailContext);
-      const cached = await getCachedAIScores(cacheUserId, hash);
+        // Anonymous users share a cache keyed by 'anon' + quiz hash
+        const cacheUserId = userId ?? 'anon';
+        const hash = computeSubmissionHash(quizAnswers, podcastInfo, emailContext);
+        const cached = await getCachedAIScores(cacheUserId, hash);
 
-      if (cached) {
-        const merged = mergeAIScoresIntoMatches(matches, cached);
-        results = merged.filter(c => c.matchScore >= SCORE_THRESHOLD);
-        scoringMethod = 'ai-cached';
-      } else {
-        // Fetch DB rows for only the top keyword-matched contacts to keep AI call fast
-        const topMatchIds = matches.slice(0, AI_CANDIDATE_LIMIT).map(m => m.id);
-        const placeholders = topMatchIds.map(() => '?').join(',');
-        const dbAi = getDb();
-        const { results: aiCandidates } = await dbAi
-          .prepare(`SELECT * FROM contacts WHERE id IN (${placeholders})`)
-          .bind(...topMatchIds)
-          .all<DbContact>();
+        if (cached) {
+          const merged = mergeAIScoresIntoMatches(matches, cached);
+          const aiFiltered = merged.filter(c => c.matchScore >= SCORE_THRESHOLD);
+          if (aiFiltered.length > 0) { results = aiFiltered; scoringMethod = 'ai-cached'; }
+        } else {
+          // Fetch DB rows for only the top keyword-matched contacts to keep AI call fast
+          const topMatchIds = matches.slice(0, AI_CANDIDATE_LIMIT).map(m => m.id);
+          const placeholders = topMatchIds.map(() => '?').join(',');
+          const dbAi = getDb();
+          const { results: aiCandidates } = await dbAi
+            .prepare(`SELECT * FROM contacts WHERE id IN (${placeholders})`)
+            .bind(...topMatchIds)
+            .all<DbContact>();
 
-        const aiScores = await scoreContactsWithAI(quizAnswers, aiCandidates, podcastInfo, emailContext);
-        await cacheAIScores(cacheUserId, hash, aiScores, AI_MODEL);
+          const aiScores = await scoreContactsWithAI(quizAnswers, aiCandidates, podcastInfo, emailContext);
+          await cacheAIScores(cacheUserId, hash, aiScores, AI_MODEL);
 
-        const merged = mergeAIScoresIntoMatches(matches, aiScores);
-        results = merged.filter(c => c.matchScore >= SCORE_THRESHOLD);
-        scoringMethod = 'ai-fresh';
+          const merged = mergeAIScoresIntoMatches(matches, aiScores);
+          const aiFiltered = merged.filter(c => c.matchScore >= SCORE_THRESHOLD);
+          if (aiFiltered.length > 0) { results = aiFiltered; scoringMethod = 'ai-fresh'; }
+        }
+      } catch (aiError) {
+        console.error('[contacts] AI scoring failed, using keyword results:', aiError);
+        // Fall through — results stays as keyword matches
       }
     }
 

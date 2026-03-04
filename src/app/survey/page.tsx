@@ -59,7 +59,7 @@ export default function SurveyPage() {
         body: JSON.stringify({ quizAnswers: answers }),
       });
       const data = await res.json() as Record<string, any>;
-      setContactMatches(data.matches || data);
+      setContactMatches(Array.isArray(data.matches) ? data.matches : []);
     } catch (error) {
       console.error('Failed to fetch contact matches:', error);
     }

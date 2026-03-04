@@ -7,6 +7,7 @@ export interface TokenStatus {
   dailyLimit: number;
   tokensUsed: number;
   tokensRemaining: number;
+  bonusTokens: number;
   canSpend: boolean;
 }
 
@@ -15,9 +16,9 @@ export async function getTokenStatus(userId: string, plan: string): Promise<Toke
   const dailyLimit = DAILY_LIMITS[plan] ?? DAILY_LIMITS.free;
 
   const row = await db
-    .prepare('SELECT tokens_used, token_date FROM user_tokens WHERE user_id = ?')
+    .prepare('SELECT tokens_used, token_date, bonus_tokens FROM user_tokens WHERE user_id = ?')
     .bind(userId)
-    .first<{ tokens_used: number; token_date: string }>();
+    .first<{ tokens_used: number; token_date: string; bonus_tokens: number }>();
 
   const todayRow = await db
     .prepare("SELECT date('now') as today")
@@ -26,37 +27,44 @@ export async function getTokenStatus(userId: string, plan: string): Promise<Toke
 
   const isStale = !row || row.token_date !== today;
   const tokensUsed = isStale ? 0 : row.tokens_used;
-  const tokensRemaining = Math.max(0, dailyLimit - tokensUsed);
+  const bonusTokens = row?.bonus_tokens ?? 0;
+  const dailyRemaining = Math.max(0, dailyLimit - tokensUsed);
+  const tokensRemaining = dailyRemaining + bonusTokens;
 
-  return { plan, dailyLimit, tokensUsed, tokensRemaining, canSpend: tokensRemaining > 0 };
+  return { plan, dailyLimit, tokensUsed, tokensRemaining, bonusTokens, canSpend: tokensRemaining > 0 };
 }
 
 export async function consumeToken(userId: string, plan: string): Promise<TokenStatus> {
   const db = getDb();
   const dailyLimit = DAILY_LIMITS[plan] ?? DAILY_LIMITS.free;
 
-  await db
-    .prepare(`
-      INSERT INTO user_tokens (user_id, tokens_used, token_date)
-      VALUES (?, 1, date('now'))
-      ON CONFLICT(user_id) DO UPDATE SET
-        tokens_used = CASE
-          WHEN token_date = date('now') THEN tokens_used + 1
-          ELSE 1
-        END,
-        token_date = date('now')
-    `)
-    .bind(userId)
-    .run();
+  const status = await getTokenStatus(userId, plan);
+  const dailyRemaining = Math.max(0, dailyLimit - status.tokensUsed);
 
-  const row = await db
-    .prepare('SELECT tokens_used FROM user_tokens WHERE user_id = ?')
-    .bind(userId)
-    .first<{ tokens_used: number }>();
+  if (dailyRemaining > 0) {
+    // Use a daily token
+    await db
+      .prepare(`
+        INSERT INTO user_tokens (user_id, tokens_used, token_date, bonus_tokens)
+        VALUES (?, 1, date('now'), 0)
+        ON CONFLICT(user_id) DO UPDATE SET
+          tokens_used = CASE
+            WHEN token_date = date('now') THEN tokens_used + 1
+            ELSE 1
+          END,
+          token_date = date('now')
+      `)
+      .bind(userId)
+      .run();
+  } else if (status.bonusTokens > 0) {
+    // Daily exhausted — consume from bonus pool
+    await db
+      .prepare('UPDATE user_tokens SET bonus_tokens = MAX(0, bonus_tokens - 1) WHERE user_id = ?')
+      .bind(userId)
+      .run();
+  }
 
-  const tokensUsed = row?.tokens_used ?? 1;
-  const tokensRemaining = Math.max(0, dailyLimit - tokensUsed);
-  return { plan, dailyLimit, tokensUsed, tokensRemaining, canSpend: tokensRemaining > 0 };
+  return getTokenStatus(userId, plan);
 }
 
 export async function checkAndConsumeToken(

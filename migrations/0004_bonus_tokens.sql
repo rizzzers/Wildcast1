@@ -1,0 +1,1 @@
+ALTER TABLE user_tokens ADD COLUMN bonus_tokens INTEGER NOT NULL DEFAULT 0;

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Quiz } from '@/components/Quiz';
 import { SponsorResults } from '@/components/SponsorResults';
 import { GrowthPlan } from '@/components/GrowthPlan';
@@ -15,6 +16,7 @@ const STORAGE_QUIZ_KEY = 'howdi_pending_quiz';
 const STORAGE_PODCAST_KEY = 'howdi_pending_podcast';
 
 export default function SurveyPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [step, setStep] = useState<AppStep>('quiz');
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -82,8 +84,10 @@ export default function SurveyPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status]);
 
-  // Core function: persist survey + fetch AI-scored contacts
+  // Core function: persist survey then redirect to dashboard
   const runContactsFlow = async (answers: QuizAnswers, podcast: PodcastInfo) => {
+    setStep('loading');
+
     // Persist survey submission
     try {
       const res = await fetch('/api/survey', {
@@ -118,21 +122,8 @@ export default function SurveyPage() {
       console.error('Failed to send notification:', error);
     }
 
-    setStep('loading');
-
-    try {
-      const res = await fetch('/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quizAnswers: answers }),
-      });
-      const data = await res.json() as Record<string, any>;
-      setContactMatches(Array.isArray(data.matches) ? data.matches : []);
-    } catch (error) {
-      console.error('Failed to fetch contact matches:', error);
-    }
-
-    setStep('results');
+    // Redirect to dashboard — /sponsors fetches contacts with the saved survey
+    router.push('/sponsors');
   };
 
   const handleQuizComplete = (answers: QuizAnswers) => {
@@ -143,17 +134,9 @@ export default function SurveyPage() {
       return;
     }
 
-    // Already authenticated — skip registration, run contacts directly
+    // Already authenticated — skip registration, go straight to dashboard
     if (session?.user) {
-      const podcast: PodcastInfo = {
-        email: session.user.email || '',
-        podcastName: '',
-        podcastUrl: '',
-        description: '',
-        hasMediaKit: false,
-      };
-      setPodcastInfo(podcast);
-      void runContactsFlow(answers, podcast);
+      router.push('/sponsors');
       return;
     }
 

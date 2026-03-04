@@ -26,7 +26,7 @@ function toggleSet<T>(prev: Set<T>, item: T): Set<T> {
 const ROLE_DEFS = [
   { label: 'Sponsorship', keywords: ['sponsorship', 'partnership', 'partnerships'] },
   { label: 'Marketing',   keywords: ['marketing', 'advertising', 'media buy', 'brand'] },
-  { label: 'Executive',   keywords: ['vp ', 'vice president', 'director', 'chief', 'svp ', 'evp ', 'cmo', 'ceo', 'president'] },
+  { label: 'Executive',   keywords: ['vp ', 'vice president', 'director', 'chief', 'svp ', 'evp ', 'cmo', 'ceo', 'president', 'senior'] },
 ];
 
 // Maps each comma-split industry tag to the first matching group

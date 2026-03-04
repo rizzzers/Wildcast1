@@ -225,7 +225,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
   // Role categories that actually exist in the loaded matches
   const availableRoles = useMemo(() =>
     ROLE_DEFS.filter(({ keywords }) =>
-      localMatches.some(c => keywords.some(kw => c.title.toLowerCase().includes(kw)))
+      localMatches.some(c => keywords.some(kw => (c.title || '').toLowerCase().includes(kw)))
     ),
   [localMatches]);
 
@@ -274,7 +274,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
     if (!activeRoles.has('Executive')) {
       const execKeywords = ROLE_DEFS.find(r => r.label === 'Executive')?.keywords || [];
       filtered = filtered.filter(c => {
-        const t = c.title.toLowerCase();
+        const t = (c.title || '').toLowerCase();
         return !execKeywords.some(kw => t.includes(kw));
       });
     }
@@ -298,7 +298,7 @@ export function SponsorResults({ matches, quizAnswers, podcastInfo, isLimited, o
         ROLE_DEFS.map(r => [r.label, r.keywords])
       );
       filtered = filtered.filter(c => {
-        const t = c.title.toLowerCase();
+        const t = (c.title || '').toLowerCase();
         return Array.from(activeRoles).some(roleLabel =>
           (roleKeywordsMap[roleLabel] || []).some(kw => t.includes(kw))
         );

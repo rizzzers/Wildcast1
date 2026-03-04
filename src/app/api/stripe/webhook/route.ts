@@ -26,9 +26,16 @@ export async function POST(req: NextRequest) {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
       const customerId = session.customer as string;
-      const subscriptionId = session.subscription as string;
 
-      if (userId) {
+      if (userId && session.metadata?.type === 'token_purchase') {
+        const quantity = parseInt(session.metadata?.quantity || '25', 10);
+        await db.prepare(`
+          INSERT INTO user_tokens (user_id, tokens_used, token_date, bonus_tokens)
+          VALUES (?, 0, date('now'), ?)
+          ON CONFLICT(user_id) DO UPDATE SET bonus_tokens = bonus_tokens + ?
+        `).bind(userId, quantity, quantity).run();
+      } else if (userId) {
+        const subscriptionId = session.subscription as string;
         await db.prepare(`
           UPDATE users
           SET plan = 'pro', stripe_customer_id = ?, stripe_subscription_id = ?, updated_at = datetime('now')

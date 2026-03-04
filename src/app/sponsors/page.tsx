@@ -29,6 +29,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function SponsorsPage() {
   const { data: session, status } = useSession();
+  const [tokensPurchased, setTokensPurchased] = useState(false);
   const [matches, setMatches] = useState<ContactMatch[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers>({});
   const [hasSurvey, setHasSurvey] = useState(false);
@@ -43,6 +44,18 @@ export default function SponsorsPage() {
   const [tokensRemaining, setTokensRemaining] = useState(0);
   const [tokenRefreshKey, setTokenRefreshKey] = useState(0);
   const [showRateBanner, setShowRateBanner] = useState(true);
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !localStorage.getItem('howdi_welcome_seen')) {
+      setShowWelcomeBanner(true);
+    }
+  }, []);
+
+  const dismissWelcome = () => {
+    setShowWelcomeBanner(false);
+    localStorage.setItem('howdi_welcome_seen', '1');
+  };
 
   const fetchMatches = useCallback(
     async (answers: QuizAnswers, podcast: PodcastInfo | null) => {
@@ -79,6 +92,18 @@ export default function SponsorsPage() {
       fetchTokens();
     }
   }, [status, fetchTokens]);
+
+  // Handle Stripe return after token purchase
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tokens') === 'purchased') {
+        setTokensPurchased(true);
+        setTokenRefreshKey(prev => prev + 1);
+        fetchTokens();
+      }
+    }
+  }, [fetchTokens]);
 
   // Fetch user's profile data and build quiz/podcast info from it
   useEffect(() => {
@@ -247,6 +272,46 @@ export default function SponsorsPage() {
           </div>
         ) : (
           <>
+            {tokensPurchased && (
+              <div className="max-w-4xl mx-auto px-6 mb-4">
+                <div className="flex items-center justify-between gap-4 px-5 py-3 rounded-xl border border-green-500/30 bg-green-500/10">
+                  <div className="flex items-center gap-2 text-sm text-green-300">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    25 bonus tokens added to your account — they never expire.
+                  </div>
+                  <button onClick={() => setTokensPurchased(false)} className="text-green-500/60 hover:text-green-400 transition-colors flex-shrink-0">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            {showWelcomeBanner && (
+              <div className="max-w-4xl mx-auto px-6 mb-4">
+                <div className="flex items-start justify-between gap-4 px-5 py-4 rounded-xl border border-[var(--primary)]/30 bg-[var(--primary)]/[0.06]">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--primary)] mb-1">Welcome to Howdi</p>
+                    <p className="text-sm text-gray-400">
+                      You get <strong className="text-white">3 AI searches per day</strong> on the free plan.{' '}
+                      Upgrade to <strong className="text-white">Pro for 50/day</strong>, or buy a one-time pack of{' '}
+                      <strong className="text-white">25 tokens for $49</strong> — they never expire.
+                    </p>
+                  </div>
+                  <button
+                    onClick={dismissWelcome}
+                    aria-label="Dismiss welcome banner"
+                    className="text-gray-500 hover:text-white transition-colors flex-shrink-0 mt-0.5"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
             {!hasSurvey && (
               <div className="max-w-4xl mx-auto px-6 mb-4">
                 <div className="flex items-center justify-between gap-4 px-5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-gray-400">

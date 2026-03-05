@@ -29,7 +29,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setIsLoading(true);
     setError('');
     try {
-      await signIn('google', { callbackUrl: window.location.href });
+      await signIn('google', { callbackUrl: '/sponsors' });
     } catch {
       setError('Failed to sign in with Google');
       setIsLoading(false);
@@ -100,6 +100,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       } else {
         onSuccess();
         onClose();
+        window.location.href = '/sponsors';
       }
     } catch {
       setError('Something went wrong');

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Sidebar } from './Sidebar';
 
@@ -13,14 +12,6 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, activeTab = 'overview' }: DashboardShellProps) {
   const { data: session } = useSession();
-  const [gmailConnected, setGmailConnected] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/gmail/status')
-      .then((r) => r.json() as Promise<{ connected: boolean }>)
-      .then((d) => setGmailConnected(d.connected))
-      .catch(() => {});
-  }, []);
 
   const user = {
     name: session?.user?.name,
@@ -33,7 +24,6 @@ export function DashboardShell({ children, activeTab = 'overview' }: DashboardSh
       <Sidebar
         activeTab={activeTab}
         user={user}
-        gmailConnected={gmailConnected}
       />
       <main className="flex-1 overflow-y-auto">
         {children}

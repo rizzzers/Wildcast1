@@ -78,7 +78,6 @@ export function OutreachModal({
   const [saveTemplateName, setSaveTemplateName] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [gmailConnected, setGmailConnected] = useState<boolean | null>(null); // null = loading
 
   // Load email context from profile when authenticated
   useEffect(() => {
@@ -118,10 +117,6 @@ export function OutreachModal({
       setSaveTemplateName('');
       setSendError(null);
 
-      fetch('/api/gmail/status')
-        .then((r) => r.json() as Promise<{ connected: boolean }>)
-        .then((d) => setGmailConnected(d.connected))
-        .catch(() => setGmailConnected(false));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -224,24 +219,6 @@ export function OutreachModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="3xl">
       <div className="space-y-4">
-        {gmailConnected === false && (
-          <div className="px-4 py-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 flex items-start gap-3">
-            <svg className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            <div>
-              <p className="text-sm text-yellow-300 font-medium">Gmail not connected</p>
-              <p className="text-sm text-gray-400 mt-0.5">
-                Connect your Gmail account in your{' '}
-                <a href="/profile" className="text-yellow-400 hover:text-yellow-300 underline">
-                  profile
-                </a>{' '}
-                to send outreach emails directly from your account.
-              </p>
-            </div>
-          </div>
-        )}
-
         {isFollowUp && (
           <div className="px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3">
             <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +229,7 @@ export function OutreachModal({
         )}
 
         <div className="text-sm text-gray-400">
-          Choose a template and edit your email. Clicking Send will deliver it directly from your Gmail account.
+          Choose a template and edit your email. Replies will go directly to your inbox.
         </div>
 
         <div className="space-y-4">
@@ -375,7 +352,7 @@ export function OutreachModal({
             )}
             <button
               onClick={handleSend}
-              disabled={!currentMessage.trim() || isSending || gmailConnected === false || gmailConnected === null}
+              disabled={!currentMessage.trim() || isSending}
               className="px-6 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               {isSending ? (

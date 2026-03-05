@@ -11,7 +11,6 @@ type NavItemId = 'overview' | 'outreach' | 'personalize' | 'settings' | 'sponsor
 interface SidebarProps {
   activeTab: NavItemId;
   user: { name?: string | null; email?: string | null; role?: string };
-  gmailConnected: boolean;
 }
 
 const navItems: { id: NavItemId; label: string; href: string; icon: React.ReactNode }[] = [
@@ -131,7 +130,7 @@ const adminItems: { id: NavItemId; label: string; href: string; icon: React.Reac
   },
 ];
 
-export function Sidebar({ activeTab, user, gmailConnected }: SidebarProps) {
+export function Sidebar({ activeTab, user }: SidebarProps) {
   const initial = (user.name || user.email || 'U')[0].toUpperCase();
 
   return (
@@ -197,13 +196,7 @@ export function Sidebar({ activeTab, user, gmailConnected }: SidebarProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${gmailConnected ? 'bg-green-400' : 'bg-gray-600'}`} />
-            <span className="text-xs text-gray-500">
-              {gmailConnected ? 'Gmail connected' : 'Gmail not connected'}
-            </span>
-          </div>
+        <div className="flex justify-end">
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
             className="text-xs text-gray-500 hover:text-white transition-colors"

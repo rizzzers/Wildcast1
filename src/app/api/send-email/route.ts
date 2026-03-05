@@ -5,77 +5,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getDb } from '@/lib/db';
 import { checkAndConsumeToken } from '@/lib/tokens';
 
-interface GmailTokenRow {
-  access_token: string;
-  refresh_token: string | null;
-  expires_at: string | null;
-  gmail_address: string | null;
-}
-
-async function getValidAccessToken(userId: string): Promise<{ accessToken: string; gmailAddress: string | null } | null> {
-  const db = getDb();
-  const row = await db
-    .prepare('SELECT access_token, refresh_token, expires_at, gmail_address FROM gmail_tokens WHERE user_id = ?')
-    .bind(userId)
-    .first<GmailTokenRow>();
-
-  if (!row) return null;
-
-  // Check if token is still valid (with 60s buffer)
-  const isExpired = row.expires_at
-    ? new Date(row.expires_at).getTime() - 60_000 < Date.now()
-    : false;
-
-  if (!isExpired) {
-    return { accessToken: row.access_token, gmailAddress: row.gmail_address };
-  }
-
-  // Token expired — refresh it
-  if (!row.refresh_token) return null;
-
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      refresh_token: row.refresh_token,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  const refreshed = await tokenRes.json() as { access_token?: string; expires_in?: number };
-  if (!tokenRes.ok || !refreshed.access_token) return null;
-
-  const newExpiresAt = refreshed.expires_in
-    ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
-    : null;
-
-  await db
-    .prepare(`UPDATE gmail_tokens SET access_token = ?, expires_at = ?, updated_at = datetime('now') WHERE user_id = ?`)
-    .bind(refreshed.access_token, newExpiresAt, userId)
-    .run();
-
-  return { accessToken: refreshed.access_token, gmailAddress: row.gmail_address };
-}
-
-function buildRawEmail(to: string, from: string, subject: string, body: string): string {
-  const message = [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    '',
-    body,
-  ].join('\r\n');
-
-  return Buffer.from(message)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -91,61 +20,61 @@ export async function POST(request: NextRequest) {
     contactName,
     contactRole,
     templateUsed,
-  } = await request.json() as { to: string; subject: string; body: string; sponsorId: string; brandName: string; contactName: string; contactRole?: string; templateUsed?: string };
+  } = await request.json() as {
+    to: string; subject: string; body: string;
+    sponsorId: string; brandName: string; contactName: string;
+    contactRole?: string; templateUsed?: string;
+  };
 
   if (!to || !subject || !body) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const tokenData = await getValidAccessToken(session.user.id);
-  if (!tokenData) {
-    return NextResponse.json({ error: 'gmail_not_connected' }, { status: 403 });
-  }
-
-  const { accessToken, gmailAddress } = tokenData;
-
   // Consume a send token (admins bypass)
   const db = getDb();
-  const userForTokens = await db
-    .prepare('SELECT plan, role FROM users WHERE id = ?')
+  const userRow = await db
+    .prepare('SELECT plan, role, name, email FROM users WHERE id = ?')
     .bind(session.user.id)
-    .first<{ plan: string; role: string }>();
+    .first<{ plan: string; role: string; name: string | null; email: string }>();
 
-  if (!userForTokens) {
+  if (!userRow) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  if (userForTokens.role !== 'admin') {
-    const { ok } = await checkAndConsumeToken(session.user.id, userForTokens.plan);
+  if (userRow.role !== 'admin') {
+    const { ok } = await checkAndConsumeToken(session.user.id, userRow.plan);
     if (!ok) {
       return NextResponse.json({ error: 'insufficient_tokens' }, { status: 402 });
     }
   }
-  const senderName = session.user.name || gmailAddress || 'Wildcast User';
-  const fromAddress = gmailAddress ?? session.user.email ?? '';
-  const rawEmail = buildRawEmail(to, `${senderName} <${fromAddress}>`, subject, body);
 
-  const gmailRes = await fetch(
-    'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw: rawEmail }),
-    }
-  );
+  const senderName = userRow.name || session.user.name || 'Howdi User';
+  const replyTo = userRow.email || session.user.email || '';
 
-  if (!gmailRes.ok) {
-    const err = await gmailRes.json();
-    console.error('Gmail send error:', err);
+  // Send via Resend
+  const resendRes = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `${senderName} via Howdi <outreach@gethowdi.com>`,
+      to: [to],
+      reply_to: replyTo,
+      subject,
+      text: body,
+    }),
+  });
+
+  if (!resendRes.ok) {
+    const err = await resendRes.json();
+    console.error('Resend error:', err);
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
 
   // Track in outreach_history
   try {
-    const db = getDb();
     await db
       .prepare(`
         INSERT INTO outreach_history
